@@ -10,6 +10,30 @@ We've prepared a pre-built image to start. Please download it with the following
 ## ARM Images
 1. `wget http://pas.csie.ntu.edu.tw/shared/qemu_images.tar`
 2. `tar -xf ./qemu_images.tar`
+3. Create your ext3 image for mounting at `/root/` in the guest OS.
+This is only required when you want to put big binaries/files inside the image.
+Also, the ext3 image provides a way to send program to guest.
+
+``` bash
+#Uncompress cpio ramfs image
+./extract_cpio.sh
+#Default generate 1G, feel free to change the size
+dd if=/dev/zero of=/tmp/data.ext3 bs=1K count=$((1 * 1024 * 1024))
+# Formating to ext3
+mkfs.ext3 /tmp/data.ext3
+mv /tmp/data.ext3 ./
+
+mkdir -p tmpfs
+sudo mount ./data.ext3 ./tmpfs
+sudo cp -r ./rootfs/root ./tmpfs
+sudo cp ./rootfs/root/.bash_profile ./tmpfs
+sudo cp ./rootfs/root/.bashrc ./tmpfs
+sync
+sync
+sync
+sudo umount ./tmpfs
+rmdir tmpfs
+```
 
 ## Arch Linux Image (ARM)
 1. `wget http://pas.csie.ntu.edu.tw/shared/arch_arm.tar`
