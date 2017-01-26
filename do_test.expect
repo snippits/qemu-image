@@ -1,0 +1,46 @@
+#!/usr/bin/expect
+
+set timeout -1;
+if {$argc != 2} {
+    send_user "Arguments: <command> <repeated times>\n";
+    send_user "ATTENTION: <command> must be in double quote if it contains arguments\n";
+    send_user "\tEx: ./do_test.expect \"ls -al\" 1\n";
+    exit;
+}
+
+set COMMAND [lindex $argv 0];
+set count [lindex $argv 1];
+set COMMAND "$COMMAND \n";
+
+set COMMAND_STR "root.*\>";
+
+spawn make execute
+
+expect -re ".* login:";
+send "root\n";
+
+sleep 0.1;
+
+# This is a dummy command. In case it fails on sending command to the very first prompt.
+expect -re $COMMAND_STR;
+send "pwd && ls\n";
+
+while {$count >= 0 } {
+    set timeout -1;
+    expect {
+        -re $COMMAND_STR {
+            set timeout 1;
+            expect -re $COMMAND_STR;
+            send $COMMAND;
+            set count [expr $count-1];
+        }
+    }
+}
+
+# Send ctrl+a, then x
+send "\x01";
+send "x";
+
+sleep 0.5;
+exit
+
