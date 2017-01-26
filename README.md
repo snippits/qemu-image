@@ -13,6 +13,7 @@ We've prepared a pre-built image to start. Please download it with the following
 3. Create your ext3 image for mounting at `/root/` in the guest OS.
 This is only required when you want to put big binaries/files inside the image.
 Also, the ext3 image provides a way to send program to guest.
+4. Uncomment and attach the line `-drive if=sd,driver=raw,cache=writeback,file=$SCRIPT_PATH/data.ext3` after QEMU's arguments in __./runQEMU.sh__
 
 ``` bash
 #Uncompress cpio ramfs image
@@ -38,6 +39,10 @@ rmdir tmpfs
 ## Arch Linux Image (ARM)
 1. `wget http://pas.csie.ntu.edu.tw/shared/arch_arm.tar`
 2. `tar -xf ./arch_arm.tar`
+3. Run `runme.sh` in __arch_arm__ folder
+4. Copy latest binaries, `rootfs/root/profile.sh`, `rootfs/root/vpmu-control-arm` and `rootfs/lib/vpmu-device-arm.ko`, to your mounted tmpfs of Arch Linux Image.
+5. `sync` and `umount` the image directory.
+6. Run `./runQEMU.sh arch`
 
 ## Custom Image
 If you want to profile your own image, remember to take a look at the script `./runQEMU.sh` for input argument template.
