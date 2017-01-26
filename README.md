@@ -2,7 +2,7 @@
 This is an image file repository for testing QEMU.
 Please upgrade the scripts and files before use by `./upgrade.sh`.
 
-The default root file system is built with [linaro gcc 4.8](https://releases.linaro.org/14.11/components/toolchain/binaries/arm-linux-gnueabi/gcc-linaro-4.9-2014.11-x86_64_arm-linux-gnueabi.tar.xz).
+The default root file system is built with [linaro gcc 4.9](https://releases.linaro.org/14.11/components/toolchain/binaries/arm-linux-gnueabi/gcc-linaro-4.9-2014.11-x86_64_arm-linux-gnueabi.tar.xz).
 Please download this compiler and add to PATH if you want to compile your own binary.
 
 # Prepare Images
@@ -45,6 +45,9 @@ Also, event tracing and phase detection require kernel headers or source to comp
 Please follow the instruction in the __snippits/vpmu_control__ repo.
 
 If you need instructions on building your own image. Please follow the blog [post](https://medicineyeh.wordpress.com/2016/03/29/buildup-your-arm-image-for-qemu/).
+
+Besides image, you also need to build the device driver and controller in __snippits/vpmu_controller__.
+Then put __vpmu-device-arm.ko__ and __vpmu-control-arm__ into your image.
 
 # Networking
 1. Prepare bridge network as listed on [Arch Wiki](https://wiki.archlinux.org/index.php/QEMU#Creating_bridge_manually)

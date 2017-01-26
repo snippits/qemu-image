@@ -5,6 +5,7 @@ data.ext3
 .macaddr
 
 vmlinux
+matrix
 
 arch_arm.tar
 arch_arm/
