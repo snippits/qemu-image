@@ -1,10 +1,5 @@
 #!/bin/bash
 SCRIPT_PATH=$(dirname $0)
-if [ -f ./setenv.sh ]; then
-    SETENV_PATH=./setenv.sh
-else
-    SETENV_PATH=$SCRIPT_PATH/../qemu_vpmu/build/setenv.sh
-fi
 #Use PATH to automatically solve the binary path problem.
 export PATH=$(pwd)/arm-softmmu/:$SCRIPT_PATH/../qemu_vpmu/build/arm-softmmu/:$PATH
 export PATH=$(pwd)/x86_64-softmmu/:$SCRIPT_PATH/../qemu_vpmu/build/x86_64-softmmu/:$PATH
@@ -12,9 +7,6 @@ export PATH=$(pwd)/i386-softmmu/:$SCRIPT_PATH/../qemu_vpmu/build/i386-softmmu/:$
 QEMU=qemu-system-arm
 QEMU_X86=qemu-system-x86_64
 QEMU_EXTRA_ARGS=''
-
-source $SETENV_PATH
-export VPMU_SET_PATH=${SCRIPT_PATH}/
 
 function print_help() {
     echo "Usage:"
