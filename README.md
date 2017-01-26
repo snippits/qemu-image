@@ -62,19 +62,20 @@ Then put __vpmu-device-arm.ko__ and __vpmu-control-arm__ into your image.
 The configuration file is __default.json__.
 
 # Usage
-## Install shell commands and completion
-* `source ./install_command.sh`
-This will install `snippit` command and completion to `./runQEMU.sh`
-Future scripts and functions will be integrated into snippit command as sub commands.
-We suggest using this command for consistency.
-
-## Run emulation with snippit command
-* `snippit qemu vexpress`
-
 ## Run emulation with script
 * Simple execution `./runQEMU.sh vexpress`
 * Debug with gdb `./runQEMU.sh -g vexpress`
 * Redirect the output path of phase and logs `./runQEMU.sh -o <PATH> vexpress`
+
+## Change window size
+Sometime the windows size (granularity) would affect the results and make it hard to read.
+Adjusting the window size is a way to inspect your code. Future version would be able to
+adjust window size offline. The current version can only do this when running program.
+Window size is assigned by environment variable in the unit of kilo instructions.
+Ex:
+* 200k instructions (default size) `PHASE_WINDOW_SIZE=200 ./runQEMU.sh vexpress`
+* 500k instructions `PHASE_WINDOW_SIZE=500 ./runQEMU.sh vexpress`
+
 
 ## How to Extract the cpio file
 * `./extract_cpio.sh`
