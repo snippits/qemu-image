@@ -63,7 +63,7 @@ We suggest using this command for consistency.
 ## Run emulation with snippit command
 * `snippit qemu vexpress`
 
-## Run emulation
+## Run emulation with script
 * Simple execution `./runQEMU.sh vexpress`
 * Debug with gdb `./runQEMU.sh -g vexpress`
 * Redirect the output path of phase and logs `./runQEMU.sh -o <PATH> vexpress`
