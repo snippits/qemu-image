@@ -14,7 +14,8 @@ set COMMAND "$COMMAND \n";
 
 set COMMAND_STR "root.*\>";
 
-spawn make execute
+# spawn make execute
+spawn ./runQEMU.sh vexpress
 
 expect -re ".* login:";
 send "root\n";
