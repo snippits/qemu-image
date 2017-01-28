@@ -26,7 +26,7 @@ mv /tmp/data.ext3 ./
 
 mkdir -p tmpfs
 sudo mount ./data.ext3 ./tmpfs
-sudo cp -r ./rootfs/root ./tmpfs
+sudo cp -r ./rootfs/root/* ./tmpfs
 sudo cp ./rootfs/root/.bash_profile ./tmpfs
 sudo cp ./rootfs/root/.bashrc ./tmpfs
 sync
@@ -40,9 +40,7 @@ rmdir tmpfs
 1. `wget http://pas.csie.ntu.edu.tw/shared/arch_arm.tar`
 2. `tar -xf ./arch_arm.tar`
 3. Run `runme.sh` in __arch_arm__ folder
-4. Copy latest binaries, `rootfs/root/profile.sh`, `rootfs/root/vpmu-control-arm` and `rootfs/lib/vpmu-device-arm.ko`, to your mounted tmpfs of Arch Linux Image.
-5. `sync` and `umount` the image directory.
-6. Run `./runQEMU.sh arch`
+4. Run `./runQEMU.sh arch`
 
 ## Custom Image
 If you want to profile your own image, remember to take a look at the script `./runQEMU.sh` for input argument template.
