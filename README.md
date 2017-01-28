@@ -41,6 +41,8 @@ rmdir tmpfs
 2. `tar -xf ./arch_arm.tar`
 3. Run `runme.sh` in __arch_arm__ folder
 4. Run `./runQEMU.sh arch`
+5. In guest system, run `insmod ./vpmu-device-arm.ko`.
+6. You can now run `./profile.sh --phase ls -al` in guest system.
 
 ## Custom Image
 If you want to profile your own image, remember to take a look at the script `./runQEMU.sh` for input argument template.
