@@ -10,7 +10,9 @@ matrix
 arch_arm.tar
 arch_arm/
 qemu_images.tar
+qemu_images-v2.tar
 kernels/
+x86_busybox/
 
 linux-user-test-0.3/
 

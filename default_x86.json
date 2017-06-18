@@ -1,0 +1,185 @@
+{
+  "cpu_models": [
+    {
+      "name": "Intel-I7",
+      "frequency": 3000,
+      "dual_issue": true,
+      "instruction": {
+        "ADD": 1,
+        "SUB": 1,
+        "MUL": 2,
+        "LEA": 3,
+        "MOV": 3
+      }
+    }
+  ],
+  "cache_models": [
+    {
+      "name": "memhigh",
+      "levels": 2,
+      "memory_ns": 110,
+      "l1 miss latency": 20,
+      "l2 miss latency": 37,
+      "topology": [
+        {
+          "name": "CPU L2",
+          "blocksize": 64,
+          "subblocksize": 64,
+          "size": 1048576,
+          "assoc": 4,
+          "split_3c_cnt": 0,
+          "replacement": "LRU",
+          "prefetch": "SUB_BLOCK",
+          "prefetch_distance": 1,
+          "prefetch_abortpercent": 0,
+          "walloc": "ALWAYS",
+          "wback": "ALWAYS",
+          "next": {
+            "d-cache": {
+              "processor": "CPU",
+              "blocksize": 32,
+              "subblocksize": 32,
+              "size": 32768,
+              "assoc": 4,
+              "split_3c_cnt": 0,
+              "replacement": "RANDOM",
+              "prefetch": "DEMAND_ONLY",
+              "prefetch_distance": 32,
+              "prefetch_abortpercent": 0,
+              "walloc": "NEVER",
+              "wback": "ALWAYS"
+            },
+            "i-cache": {
+              "processor": "CPU",
+              "blocksize": 32,
+              "subblocksize": 32,
+              "size": 32768,
+              "assoc": 4,
+              "split_3c_cnt": 0,
+              "replacement": "RANDOM",
+              "prefetch": "DEMAND_ONLY",
+              "prefetch_distance": 32,
+              "prefetch_abortpercent": 0,
+              "walloc": "NEVER",
+              "wback": "ALWAYS"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "dinero",
+      "levels": 2,
+      "memory_ns": 700,
+      "l1 miss latency": 20,
+      "l2 miss latency": 100,
+      "topology": [
+        {
+          "name": "CPU L2",
+          "blocksize": 64,
+          "subblocksize": 64,
+          "size": 1048576,
+          "assoc": 4,
+          "split_3c_cnt": 0,
+          "replacement": "LRU",
+          "prefetch": "SUB_BLOCK",
+          "prefetch_distance": 1,
+          "prefetch_abortpercent": 0,
+          "walloc": "ALWAYS",
+          "wback": "ALWAYS",
+          "next": {
+            "d-cache": {
+              "processor": "CPU",
+              "blocksize": 32,
+              "subblocksize": 32,
+              "size": 16384,
+              "assoc": 4,
+              "split_3c_cnt": 0,
+              "replacement": "RANDOM",
+              "prefetch": "DEMAND_ONLY",
+              "prefetch_distance": 32,
+              "prefetch_abortpercent": 0,
+              "walloc": "NEVER",
+              "wback": "ALWAYS"
+            },
+            "i-cache": {
+              "processor": "CPU",
+              "blocksize": 32,
+              "subblocksize": 32,
+              "size": 16384,
+              "assoc": 4,
+              "split_3c_cnt": 0,
+              "replacement": "RANDOM",
+              "prefetch": "DEMAND_ONLY",
+              "prefetch_distance": 32,
+              "prefetch_abortpercent": 0,
+              "walloc": "NEVER",
+              "wback": "ALWAYS"
+            }
+          }
+        },
+        {
+          "name": "GPU L2",
+          "blocksize": 64,
+          "subblocksize": 64,
+          "size": 1048576,
+          "assoc": 8,
+          "split_3c_cnt": 0,
+          "replacement": "LRU",
+          "prefetch": "SUB_BLOCK",
+          "prefetch_distance": 1,
+          "prefetch_abortpercent": 0,
+          "walloc": "ALWAYS",
+          "wback": "ALWAYS",
+          "next": {
+            "d-cache": {
+              "processor": "GPU",
+              "blocksize": 32,
+              "subblocksize": 32,
+              "size": 16384,
+              "assoc": 4,
+              "split_3c_cnt": 0,
+              "replacement": "RANDOM",
+              "prefetch": "DEMAND_ONLY",
+              "prefetch_distance": 32,
+              "prefetch_abortpercent": 0,
+              "walloc": "NEVER",
+              "wback": "ALWAYS"
+            },
+            "i-cache": {
+              "processor": "GPU",
+              "blocksize": 32,
+              "subblocksize": 32,
+              "size": 16384,
+              "assoc": 4,
+              "split_3c_cnt": 0,
+              "replacement": "RANDOM",
+              "prefetch": "DEMAND_ONLY",
+              "prefetch_distance": 32,
+              "prefetch_abortpercent": 0,
+              "walloc": "NEVER",
+              "wback": "ALWAYS"
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "branch_models": [
+    {
+      "name": "ght",
+      "miss latency": 20
+    },
+    {
+      "name": "two bits",
+      "miss latency": 20
+    },
+    {
+      "name": "one bit",
+      "miss latency": 20
+    }
+  ],
+  "SET": {
+    "timing_model": 5
+  }
+}

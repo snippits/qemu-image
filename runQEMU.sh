@@ -20,11 +20,10 @@ function print_help() {
     echo "                             default: /tmp/snippit"
     echo ""
     echo "Device Name List:"
-    echo "       x86_64"
+    echo "       x86_busybox"
+    echo "       x86_arch"
     echo "       arch"
     echo "       vexpress"
-    echo "       versatile"
-    echo "       realview"
 }
 
 function open_tap() {
@@ -62,6 +61,7 @@ while [[ 1 ]]; do
             # One could also use command 'call fflush({file descriptor})' in gdb
             export LD_PRELOAD=${SCRIPT_PATH}/nobuffering.so
             QEMU="gdb --args $QEMU"
+            QEMU_X86="gdb --args $QEMU_X86"
             shift 1
             ;;
         "-o" )
@@ -91,26 +91,43 @@ fi
 
 generate_random_mac_addr
 case "$dev" in
-    "x86_64" )
+    "x86_arch" )
         #open_tap
         $QEMU_X86 \
-        -boot order=c\
+        -boot order=c \
         -cdrom $SCRIPT_PATH/x86_64/archlinux.iso \
         -drive file=$SCRIPT_PATH/x86_64/paslab.ext4,format=raw \
         -m 2048 \
-        -smp 4 \
         $QEMU_EXTRA_ARGS \
         --nographic \
         -snapshot \
+        #-smp 4 \
         #-net nic,model=virtio,macaddr=$MAC_ADDR \
         #-net tap,vlan=0,ifname=tap0 \
         #-enable-kvm \
+        ;;
+    "x86_busybox" )
+        #open_tap
+        $QEMU_X86 \
+        -M pc \
+        -kernel $SCRIPT_PATH/x86_busybox/bzImage \
+        -hda $SCRIPT_PATH/x86_busybox/rootfs_x86.ext2 \
+        -append "root=/dev/sda console=ttyS0" \
+        -m 2048 \
+        $QEMU_EXTRA_ARGS \
+        -vpmu-config "$SCRIPT_PATH/default_x86.json" \
+        --nographic \
+        -snapshot \
+        #-smp 4 \
+        #-S -gdb tcp::1234
+        #-drive if=sd,driver=raw,cache=writeback,file=$SCRIPT_PATH/data.ext3
         ;;
     "arch" )
         link_vmlinux "./arch_arm/vmlinux_arch"
         #open_tap
         $QEMU \
         -M vexpress-a9 \
+        -m 1024M \
         -kernel $SCRIPT_PATH/arch_arm/zImage_arch \
         -dtb $SCRIPT_PATH/arch_arm/vexpress-v2p-ca9.dtb \
         -drive if=sd,driver=raw,cache=writeback,file=$SCRIPT_PATH/arch_arm/paslab.ext4 \
@@ -123,27 +140,12 @@ case "$dev" in
         #-net nic,macaddr=$MAC_ADDR \
         #-net tap,vlan=0,ifname=tap0
         ;;
-    "vexpressold" )
-        link_vmlinux "./kernels/vmlinux_vexpress"
-        #open_tap
-        $QEMU \
-        -M vexpress-a9 \
-        -kernel $SCRIPT_PATH/kernels/zImage_vexpress \
-        -initrd $SCRIPT_PATH/rootfs.cpio  \
-        -dtb $SCRIPT_PATH/vexpress-v2p-ca9.dtb \
-        -append "console=ttyAMA0" \
-        --nographic \
-        #-snapshot \
-        #-drive if=sd,driver=raw,cache=writeback,file=$SCRIPT_PATH/data.ext3
-        #-net nic,macaddr=$MAC_ADDR \
-        #-net tap,vlan=0,ifname=tap0 \
-        #-drive if=sd,driver=raw,cache=writeback,file=$SCRIPT_PATH/data.ext3
-        ;;
     "vexpress" )
         link_vmlinux "./kernels/vmlinux_vexpress"
         #open_tap
         $QEMU \
         -M vexpress-a9 \
+        -m 1024M \
         -kernel $SCRIPT_PATH/kernels/zImage_vexpress \
         -initrd $SCRIPT_PATH/rootfs.cpio  \
         -dtb $SCRIPT_PATH/vexpress-v2p-ca9.dtb \
@@ -151,34 +153,13 @@ case "$dev" in
         -vpmu-config "$SCRIPT_PATH/default.json" \
         $QEMU_EXTRA_ARGS \
         --nographic \
+        #-smp 4 \
         #-vpmu-kernel-symbol $SCRIPT_PATH/vmlinux \
         #-snapshot \
         #-drive if=sd,driver=raw,cache=writeback,file=$SCRIPT_PATH/data.ext3
         #-net nic,macaddr=$MAC_ADDR \
         #-net tap,vlan=0,ifname=tap0 \
         #-drive if=sd,driver=raw,cache=writeback,file=$SCRIPT_PATH/data.ext3
-        ;;
-    "versatile" )
-        link_vmlinux "./kernels/vmlinux_versatilepb"
-        $QEMU \
-        -kernel $SCRIPT_PATH/kernels/zImage_versatilepb \
-        -initrd $SCRIPT_PATH/rootfs.cpio \
-        -append "console=ttyAMA0" \
-        -vpmu-config "$SCRIPT_PATH/default.json" \
-        $QEMU_EXTRA_ARGS \
-        -nographic \
-        -M versatilepb
-        ;;
-    "realview" )
-        $QEMU \
-        -kernel $SCRIPT_PATH/kernels/zImage_realview_pbx_a9 \
-        -initrd $SCRIPT_PATH/rootfs.cpio \
-        -append "console=ttyAMA0" \
-        -vpmu-config "$SCRIPT_PATH/default.json" \
-        $QEMU_EXTRA_ARGS \
-        -nographic \
-        -M realview-pbx-a9 \
-        -m 1024M
         ;;
     * )
         echo "Device \"$dev\" is not in the list"
