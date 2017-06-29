@@ -1,4 +1,5 @@
 #!/bin/bash
+SCRIPT_PATH=$(dirname "${BASH_SOURCE[0]}")
 files=('qemu_images-v2.tar'
        'arch_arm.tar')
 
@@ -36,6 +37,8 @@ function main() {
     local RED='\033[1;31m'
     local NC='\033[0m'
     local index=0
+
+    cd ${SCRIPT_PATH}
     for file_path in "${files[@]}"; do
         [[ ! -f ${file_path} ]] && wget ${links[${index}]}
         if $(check_sha256 $file_path ${sha256sums[${index}]}); then
