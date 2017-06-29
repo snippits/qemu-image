@@ -17,19 +17,28 @@ function check_sha256() {
 
 function unfold_file() {
     local filename=$(basename "$1")
+    local dirname="${filename%.*}"
     local extension="${filename##*.}"
     local GREEN='\033[1;32m'
     local BLUE='\033[1;34m'
     local NC='\033[0m'
 
-    case "$extension" in
-        "tar" )
-            echo -e "${GREEN}decompress file $file_path${NC}"
-            tar -xf $1
-            ;;
-        * )
-            echo -e "${BLUE}passed${NC}"
-            ;;
+    echo -e "${GREEN}decompress file $file_path${NC}"
+    case "$filename" in
+        *.tar.gz|*.tgz) tar zxf "$1" ;;
+        *.tar.bz2|*.tbz|*.tbz2) tar xjf "$1" ;;
+        *.tar.xz|*.txz) tar --xz --help &> /dev/null && tar --xz -xf "$1" || xzcat "$1" | tar xf - ;;
+        *.tar.zma|*.tlz) tar --lzma --help &> /dev/null && tar --lzma -xf "$1" || lzcat "$1" | tar xf - ;;
+        *.tar) tar xf "$1" ;;
+        *.gz) gunzip "$1" ;;
+        *.bz2) bunzip2 "$1" ;;
+        *.xz) unxz "$1" ;;
+        *.lzma) unlzma "$1" ;;
+        *.Z) uncompress "$1" ;;
+        *.zip|*.war|*.jar|*.sublime-package|*.ipsw|*.xpi|*.apk) unzip "$1" -d $dirname ;;
+        *.rar) unrar x -ad "$1" ;;
+        *.7z) 7za x "$1" ;;
+        * ) echo -e "${BLUE}fail to decompress file $file_path${NC}" ;;
     esac
 }
 
