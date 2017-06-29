@@ -38,7 +38,7 @@ function print_help() {
     echo "Device Name List:"
     echo "       x86_busybox"
     echo "       x86_arch"
-    echo "       arch"
+    echo "       arm_arch"
     echo "       vexpress"
 }
 
@@ -152,7 +152,7 @@ case "$dev" in
         QEMU_ARGS+=(-append "root=/dev/sda console=ttyS0")
         QEMU_ARGS+=(-vpmu-config $SCRIPT_PATH/default_x86.json)
         ;;
-    "arch" )
+    "arm_arch" )
         link_vmlinux "./arch_arm/vmlinux_arch"
         QEMU=$QEMU_ARM
         QEMU_ARGS+=(-M vexpress-a9)
