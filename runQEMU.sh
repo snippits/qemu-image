@@ -1,23 +1,39 @@
 #!/bin/bash
-SCRIPT_PATH=$(dirname $0)
+SCRIPT_PATH=$(dirname "${BASH_SOURCE[0]}")
 #Use PATH to automatically solve the binary path problem.
 export PATH=$(pwd)/arm-softmmu/:$SCRIPT_PATH/../qemu_vpmu/build/arm-softmmu/:$PATH
 export PATH=$(pwd)/x86_64-softmmu/:$SCRIPT_PATH/../qemu_vpmu/build/x86_64-softmmu/:$PATH
 export PATH=$(pwd)/i386-softmmu/:$SCRIPT_PATH/../qemu_vpmu/build/i386-softmmu/:$PATH
-QEMU=qemu-system-arm
+QEMU_ARM=qemu-system-arm
 QEMU_X86=qemu-system-x86_64
-QEMU_EXTRA_ARGS=''
+QEMU_ARGS=()
+QEMU_EXTRA_ARGS=()
+
+QEMU_ARGS+=(-m 1024)
+QEMU_ARGS+=(--nographic)
+# QEMU_ARGS+=(-vpmu-kernel-symbol $SCRIPT_PATH/vmlinux)
+# QEMU_ARGS+=(-drive if=sd,driver=raw,cache=writeback,file=$SCRIPT_PATH/data.ext3)
 
 function print_help() {
     echo "Usage:"
     echo "       $0 [OPTION]... <DEVICE NAME>"
     echo "  Execute QEMU with preset arguments for execution."
     echo ""
-    echo "OPTION:"
+    echo "Options:"
+    echo "       -net                : Enable networks"
     echo "       -g                  : Use gdb to run QEMU"
+    echo "       -gg                 : Run QEMU with remote gdb mode to debug guest program"
+    echo "                             Default port: 1234"
     echo "       -o <OUTPUT PATH>    : Specify the output directory for emulation"
     echo "                             OUTPUT PATH is the path to a directory for logs and files."
     echo "                             default: /tmp/snippit"
+    echo ""
+    echo "Options to QEMU:"
+    echo "       -smp <N>            : Number of cores (default: 1)"
+    echo "       -m <N>              : Size of memory (default: 1024)"
+    echo "       -snapshot           : Read only guest image"
+    echo "       -enable-kvm         : Enable KVM"
+    echo "       -drive <PATH>       : Hook another disk image to guest"
     echo ""
     echo "Device Name List:"
     echo "       x86_busybox"
@@ -53,19 +69,49 @@ function generate_random_mac_addr() {
     MAC_ADDR=$(cat $SCRIPT_PATH/.macaddr)
 }
 
-while [[ 1 ]]; do
+while [[ "$1" != "" ]]; do
     # Parse arguments
     case "$1" in
+        "-net" )
+            generate_random_mac_addr
+            open_tap
+            QEMU_ARGS+=(-net nic,model=virtio,macaddr=$MAC_ADDR -net tap,vlan=0,ifname=tap0)
+            shift 1
+            ;;
         "-g" )
             # Disable file buffering to get the latest results from output
             # One could also use command 'call fflush({file descriptor})' in gdb
             export LD_PRELOAD=${SCRIPT_PATH}/nobuffering.so
-            QEMU="gdb --args $QEMU"
+            QEMU_ARM="gdb --args $QEMU_ARM"
             QEMU_X86="gdb --args $QEMU_X86"
             shift 1
             ;;
+        "-gg" )
+            QEMU_ARGS+=(-S -gdb tcp::1234)
+            shift 1
+            ;;
         "-o" )
-            QEMU_EXTRA_ARGS+=" -vpmu-output '$2'"
+            QEMU_EXTRA_ARGS+=(-vpmu-output '$2')
+            shift 2
+            ;;
+        "-smp" )
+            QEMU_ARGS+=(-smp $2)
+            shift 2
+            ;;
+        "-m" )
+            QEMU_ARGS+=(-m $2)
+            shift 2
+            ;;
+        "-snapshot" )
+            QEMU_ARGS+=(-snapshot)
+            shift 1
+            ;;
+        "-enable-kvm" )
+            QEMU_ARGS+=(-enable-kvm)
+            shift 1
+            ;;
+        "-drive" )
+            QEMU_ARGS+=(-drive if=sd,driver=raw,cache=writeback,file=$2)
             shift 2
             ;;
         "-h" )
@@ -78,7 +124,7 @@ while [[ 1 ]]; do
             ;;
         * )
             dev="$1"
-            break
+            shift 1
             ;;
     esac
 done
@@ -89,83 +135,52 @@ if [ -z "$dev" ]; then
     exit 1
 fi
 
-generate_random_mac_addr
 case "$dev" in
     "x86_arch" )
-        #open_tap
-        $QEMU_X86 \
-        -boot order=c \
-        -cdrom $SCRIPT_PATH/x86_64/archlinux.iso \
-        -drive file=$SCRIPT_PATH/x86_64/paslab.ext4,format=raw \
-        -m 2048 \
-        $QEMU_EXTRA_ARGS \
-        --nographic \
-        -snapshot \
-        #-smp 4 \
-        #-net nic,model=virtio,macaddr=$MAC_ADDR \
-        #-net tap,vlan=0,ifname=tap0 \
-        #-enable-kvm \
+        QEMU=$QEMU_X86
+        QEMU_ARGS+=(-M pc)
+        QEMU_ARGS+=(-boot order=c)
+        QEMU_ARGS+=(-cdrom $SCRIPT_PATH/x86_64/archlinux.iso)
+        QEMU_ARGS+=(-drive file=$SCRIPT_PATH/x86_64/paslab.ext4,format=raw)
+        QEMU_ARGS+=(-vpmu-config $SCRIPT_PATH/default_x86.json)
         ;;
     "x86_busybox" )
-        #open_tap
-        $QEMU_X86 \
-        -M pc \
-        -kernel $SCRIPT_PATH/x86_busybox/bzImage \
-        -hda $SCRIPT_PATH/x86_busybox/rootfs_x86.ext2 \
-        -append "root=/dev/sda console=ttyS0" \
-        -m 2048 \
-        $QEMU_EXTRA_ARGS \
-        -vpmu-config "$SCRIPT_PATH/default_x86.json" \
-        --nographic \
-        -snapshot \
-        #-smp 4 \
-        #-S -gdb tcp::1234
-        #-drive if=sd,driver=raw,cache=writeback,file=$SCRIPT_PATH/data.ext3
+        QEMU=$QEMU_X86
+        QEMU_ARGS+=(-M pc)
+        QEMU_ARGS+=(-kernel $SCRIPT_PATH/x86_busybox/bzImage)
+        QEMU_ARGS+=(-drive file=$SCRIPT_PATH/x86_busybox/rootfs_x86.ext2,format=raw)
+        QEMU_ARGS+=(-append "root=/dev/sda console=ttyS0")
+        QEMU_ARGS+=(-vpmu-config $SCRIPT_PATH/default_x86.json)
         ;;
     "arch" )
         link_vmlinux "./arch_arm/vmlinux_arch"
-        #open_tap
-        $QEMU \
-        -M vexpress-a9 \
-        -m 1024M \
-        -kernel $SCRIPT_PATH/arch_arm/zImage_arch \
-        -dtb $SCRIPT_PATH/arch_arm/vexpress-v2p-ca9.dtb \
-        -drive if=sd,driver=raw,cache=writeback,file=$SCRIPT_PATH/arch_arm/paslab.ext4 \
-        -append "root=/dev/mmcblk0 rw roottype=ext4 console=ttyAMA0" \
-        -vpmu-config "$SCRIPT_PATH/default.json" \
-        $QEMU_EXTRA_ARGS \
-        --nographic \
-        -snapshot \
-        #-vpmu-kernel-symbol $SCRIPT_PATH/vmlinux \
-        #-net nic,macaddr=$MAC_ADDR \
-        #-net tap,vlan=0,ifname=tap0
+        QEMU=$QEMU_ARM
+        QEMU_ARGS+=(-M vexpress-a9)
+        QEMU_ARGS+=(-kernel $SCRIPT_PATH/arch_arm/zImage_arch)
+        QEMU_ARGS+=(-dtb $SCRIPT_PATH/arch_arm/vexpress-v2p-ca9.dtb)
+        QEMU_ARGS+=(-drive if=sd,driver=raw,cache=writeback,file=$SCRIPT_PATH/arch_arm/paslab.ext4)
+        QEMU_ARGS+=(-append "root=/dev/mmcblk0 rw roottype=ext4 console=ttyAMA0")
+        QEMU_ARGS+=(-vpmu-config $SCRIPT_PATH/default.json)
         ;;
     "vexpress" )
         link_vmlinux "./kernels/vmlinux_vexpress"
-        #open_tap
-        $QEMU \
-        -M vexpress-a9 \
-        -m 1024M \
-        -kernel $SCRIPT_PATH/kernels/zImage_vexpress \
-        -initrd $SCRIPT_PATH/rootfs.cpio  \
-        -dtb $SCRIPT_PATH/vexpress-v2p-ca9.dtb \
-        -append "console=ttyAMA0" \
-        -vpmu-config "$SCRIPT_PATH/default.json" \
-        $QEMU_EXTRA_ARGS \
-        --nographic \
-        #-smp 4 \
-        #-vpmu-kernel-symbol $SCRIPT_PATH/vmlinux \
-        #-snapshot \
-        #-drive if=sd,driver=raw,cache=writeback,file=$SCRIPT_PATH/data.ext3
-        #-net nic,macaddr=$MAC_ADDR \
-        #-net tap,vlan=0,ifname=tap0 \
-        #-drive if=sd,driver=raw,cache=writeback,file=$SCRIPT_PATH/data.ext3
+        QEMU=$QEMU_ARM
+        QEMU_ARGS+=(-M vexpress-a9)
+        QEMU_ARGS+=(-kernel $SCRIPT_PATH/kernels/zImage_vexpress)
+        QEMU_ARGS+=(-dtb $SCRIPT_PATH/vexpress-v2p-ca9.dtb)
+        QEMU_ARGS+=(-initrd $SCRIPT_PATH/rootfs.cpio)
+        QEMU_ARGS+=(-append "console=ttyAMA0")
+        QEMU_ARGS+=(-vpmu-config $SCRIPT_PATH/default.json)
         ;;
     * )
         echo "Device \"$dev\" is not in the list"
         exit 1
         ;;
 esac
+
+# echo "Running command: ${QEMU} ${QEMU_ARGS[*]} ${QEMU_EXTRA_ARGS[*]}"
+# Execute QEMU
+$QEMU "${QEMU_ARGS[@]}" "${QEMU_EXTRA_ARGS[@]}"
 
 #Leave some time to clean up the forked processes
 sleep 0.2
