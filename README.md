@@ -1,20 +1,27 @@
 # Introduction
 This is an image file repository for testing QEMU.
-Please upgrade the scripts and files before use by `./upgrade.sh`.
 
-The default root file system is built with [linaro gcc 4.9](https://releases.linaro.org/14.11/components/toolchain/binaries/arm-linux-gnueabi/gcc-linaro-4.9-2014.11-x86_64_arm-linux-gnueabi.tar.xz).
+The default root file system is built with [linaro gcc 4.9](https://releases.linaro.org/components/toolchain/gcc-linaro/4.9-2017.01/gcc-linaro-4.9-2017.01.tar.xz).
 Please download this compiler and add to PATH if you want to compile your own binary.
 
+# 3 Steps to Use
+1. Make sure the __snippits/qemu_vpmu__ is built.
+2. Run `./download.sh` to download pre-built images.
+3. Execute `./runQEMU.sh vexpress`. That's it!!
+
 # Prepare Images
-We've prepared a pre-built image to start. Please download it with the following steps.
+We've prepared a pre-built image to start. Please download it by running `./download.sh`.
+After downloading the files, they would be automatically decompressed and ready for use.
+The pre-built image will automatically mount the attached custom disk image to `/root` if __-drive__ option presents.
+
+To make changes of the images, one can use `snippit image push <FILE PATH> to <IMAGE NAME>`.
+To get the list of installed images, one can use `snippit image list`.
+
+The following is manual method to push/pull custom files/binaries into/from the image.
 ## ARM Images
-1. `wget http://pas.csie.ntu.edu.tw/shared/qemu_images.tar`
-2. `tar -xf ./qemu_images.tar`
-3. Create your ext3 image for mounting at `/root/` in the guest OS.
+1. Create your ext3 image for mounting at `/root` in the guest OS, and then copy all the files in original `/root` into new `/root`.
 This is only required when you want to put big binaries/files inside the image.
 Also, the ext3 image provides a way to send program to guest.
-4. Uncomment and attach the line `-drive if=sd,driver=raw,cache=writeback,file=$SCRIPT_PATH/data.ext3` after QEMU's arguments in __./runQEMU.sh__
-
 ``` bash
 #Uncompress cpio ramfs image
 ./extract_cpio.sh
@@ -35,37 +42,38 @@ sync
 sudo umount ./tmpfs
 rmdir tmpfs
 ```
+2. Run your image with __-drive__ option when executing the script. `./runQEMU.sh -drive ./data.ext3` Our pre-built image will mount the new disk to `/root` if __-drive__ option presents. There is no need to modify the image.
 
 ## Arch Linux Image (ARM)
-1. `wget http://pas.csie.ntu.edu.tw/shared/arch_arm.tar`
-2. `tar -xf ./arch_arm.tar`
-3. Run `runme.sh` in __arch_arm__ folder
-4. Run `./runQEMU.sh arch`
-5. In guest system, run `insmod ./vpmu-device-arm.ko`.
-6. You can now run `./profile.sh --phase ls -al` in guest system.
+1. Run `runme.sh` in __arch_arm__ folder
+2. Run `./runQEMU.sh arm_arch`
+3. In guest system, run `insmod ./vpmu-device-arm.ko`.
+4. You can now run `./profile.sh --phase ls -al` in guest system.
 
 ## Custom Image
-If you want to profile your own image, remember to take a look at the script `./runQEMU.sh` for input argument template.
+If you want to profile with your own image, remember to take a look at the script `./runQEMU.sh` for input argument template.
 Also, event tracing and phase detection require kernel headers or source to compile device driver.
 Please follow the instruction in the __snippits/vpmu_control__ repo.
 
 If you need instructions on building your own image. Please follow the blog [post](https://medicineyeh.wordpress.com/2016/03/29/buildup-your-arm-image-for-qemu/).
 
 Besides image, you also need to build the device driver and controller in __snippits/vpmu_controller__.
-Then put __vpmu-device-arm.ko__ and __vpmu-control-arm__ into your image.
+Then put __vpmu-device-<ARCH>.ko__ and __vpmu-control-<ARCH>__ into your image, where ARCH could be either x86 or arm.
 
 # Networking
 1. Prepare bridge network as listed on [Arch Wiki](https://wiki.archlinux.org/index.php/QEMU#Creating_bridge_manually)
-2. Uncomment the bash function `open_tap` and two lines started with "-net XXXX"
+2. Run script with __-net__ option. `./runQEMU.sh -net`
 
 # Change Configuration of Emulation
-The configuration file is __default.json__.
+The configuration file is __default.json__ for ARM and __default_x86.json__ for x86_64.
 
 # Usage
 ## Run emulation with script
 * Simple execution `./runQEMU.sh vexpress`
-* Debug with gdb `./runQEMU.sh -g vexpress`
+* Debug with gdb `./runQEMU.sh vexpress -g`
+* Attach a new disk image `./runQEMU.sh vexpress -drive <PATH>`
 * Redirect the output path of phase and logs `./runQEMU.sh -o <PATH> vexpress`
+* Please refer to `./runQEMU.sh -h` for more options
 
 ## Change window size
 Sometime the windows size (granularity) would affect the results and make it hard to read.
