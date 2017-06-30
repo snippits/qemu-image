@@ -39,9 +39,16 @@ function find_image_file_in_list() {
 
 function pretty_print_list() {
     local list="${1}"
+    local last_folder_name=""
+    local name=""
 
     for f in ${list}; do
-        printf "%-40s  %-20s  %-20s\n" "${f##./}" $(get_image_type "${f}") $(du -h "${f}" | cut -f1)
+        last_folder_name="$(basename $(dirname $f))"
+        name="$(basename $f)"
+        printf "%-40s  %-20s  %-20s\n" \
+               "${last_folder_name}/${name}" \
+               $(get_image_type "${f}") \
+               $(du -h "${f}" | cut -f1)
     done
 }
 
@@ -95,7 +102,7 @@ function extract_cpio() {
     cd "$IMAGE_DIR"
     [[ "$?" != "0" ]] && exit 4
     echo "Extracting CPIO image..."
-    sudo cpio -idu < "$file_path"
+    sudo cpio -idu --quiet < "$file_path"
     cd - > /dev/null # Mute the folder change message
 }
 
@@ -104,7 +111,7 @@ function build_cpio() {
     [[ ! -r "$file_path" ]] && exit 4
     cd "$IMAGE_DIR"
     echo "Compressing CPIO image..."
-    sudo find . | sudo cpio -H newc -o > "$file_path"
+    sudo find . | sudo cpio -H newc --quiet -o > "$file_path"
     cd - > /dev/null # Mute the folder change message
 }
 
@@ -147,7 +154,7 @@ function check_all_paths() {
     if [[ "$image_path" == "" ]]; then
         echo -e "${RED}[Fatal] Image ${tmp_img_name} was not found${NC}"
         echo "Please specify one of the following:"
-        list_images
+        image_list
         exit 4
     fi
     if [[ "$to_file_path" == "" ]]; then
@@ -225,6 +232,7 @@ function push_file_to_image() {
 
     # Number of input arguments
     [[ ${#*} != 2 ]] && exit 4
+    [[ "$2" != *"@"* ]] && echo -e "${RED}Wrong input format${NC}" && exit 4
     echo "Copy file '${file_path}' into image '${image_path##./}' with path '${to_file_path}'"
     echo ""
     check_all_paths "$file_path" "$image_path" "$to_file_path"
@@ -243,6 +251,7 @@ function pull_file_from_image() {
 
     # Number of input arguments
     [[ ${#*} != 2 ]] && exit 4
+    [[ "$1" != *"@"* ]] && echo -e "${RED}Wrong input format${NC}" && exit 4
     echo "Copy file '${file_path}' from image '${image_path##./}' with path '${to_file_path}'"
     echo ""
     # Output "file_path" does not need to be check so we pass ".", which always exist
@@ -264,6 +273,7 @@ function rm_file_from_image() {
 
     # Number of input arguments
     [[ ${#*} != 1 ]] && exit 4
+    [[ "$1" != *"@"* ]] && echo -e "${RED}Wrong input format${NC}" && exit 4
     echo "Remove file '${to_file_path}' from image '${image_path##./}'"
     echo ""
     # Output "file_path" does not need to be check so we pass ".", which always exist
@@ -285,6 +295,7 @@ function mkdir_to_image() {
 
     # Number of input arguments
     [[ ${#*} != 1 ]] && exit 4
+    [[ "$1" != *"@"* ]] && echo -e "${RED}Wrong input format${NC}" && exit 4
     echo "Make a directory '${to_file_path}' in image '${image_path##./}'"
     echo ""
     # Output "file_path" does not need to be check so we pass ".", which always exist
@@ -308,7 +319,8 @@ function ls_in_image() {
 
     # Number of input arguments
     [[ ${#*} != 1 ]] && exit 4
-    echo "Make a directory '${to_file_path}' in image '${image_path##./}'"
+    [[ "$1" != *"@"* ]] && echo -e "${RED}Wrong input format${NC}" && exit 4
+    echo "List the directory '${to_file_path}' in image '${image_path##./}'"
     echo ""
     # Output "file_path" does not need to be check so we pass ".", which always exist
     check_all_paths "." "$image_path" "$to_file_path"
@@ -339,27 +351,30 @@ function print_help() {
 [[ ${#*} == 0 ]] && print_help
 
 case "$1" in
+"-h" | "--help")
+    print_help
+    ;;
 "list")
     image_list
     ;;
 "push")
-    [[ ${#*} != 3 ]] && print_help
+    [[ ${#*} != 3 ]] && echo "# of arguments is not 2" && exit 4
     push_file_to_image "$2" "$3"
     ;;
 "pull")
-    [[ ${#*} != 3 ]] && print_help
+    [[ ${#*} != 3 ]] && echo "# of arguments is not 2" && exit 4
     pull_file_from_image "$2" "$3"
     ;;
 "rm")
-    [[ ${#*} != 2 ]] && print_help
+    [[ ${#*} != 2 ]] && echo "# of arguments is not 1" && exit 4
     rm_file_from_image "$2"
     ;;
 "mkdir")
-    [[ ${#*} != 2 ]] && print_help
+    [[ ${#*} != 2 ]] && echo "# of arguments is not 1" && exit 4
     mkdir_to_image "$2"
     ;;
 "ls")
-    [[ ${#*} != 2 ]] && print_help
+    [[ ${#*} != 2 ]] && echo "# of arguments is not 1" && exit 4
     ls_in_image "$2"
     ;;
 *)
