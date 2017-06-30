@@ -17,7 +17,7 @@ function check_sha256() {
 
 function unfold_file() {
     local filename=$(basename "$1")
-    local dirname="${filename%.*}"
+    local dirname="${filename%%.*}"
     local extension="${filename##*.}"
     local GREEN='\033[1;32m'
     local BLUE='\033[1;34m'
