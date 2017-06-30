@@ -6,7 +6,7 @@ files=('qemu_images-v2.tar'
 links=('http://pas.csie.ntu.edu.tw/shared/qemu_images-v2.tar'
        'http://pas.csie.ntu.edu.tw/shared/arch_arm.tar')
 
-sha256sums=('68ef08ef3ee3aa47bd7e1af1080f9d77a026f7b7127fb642a3fc3fad13bffcca'
+sha256sums=('baedfced2cd73de0270239e002df5d581a02ac32e6db836f88d3e32392b36ed5'
             '033a8ca7803513a47c22d05d0fae0006fd3641211a4ffc9a6c620734d94920ac')
 
 function check_sha256() {
