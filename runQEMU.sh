@@ -91,7 +91,7 @@ while [[ "$1" != "" ]]; do
             shift 1
             ;;
         "-o" )
-            QEMU_EXTRA_ARGS+=(-vpmu-output '$2')
+            QEMU_EXTRA_ARGS+=(-vpmu-output "$(readlink -f "$2")")
             shift 2
             ;;
         "-smp" )
