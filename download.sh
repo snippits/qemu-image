@@ -1,5 +1,5 @@
 #!/bin/bash
-SCRIPT_PATH=$(dirname "${BASH_SOURCE[0]}")
+SCRIPT_PATH="$(dirname "${BASH_SOURCE[0]}")"
 IMAGE_DIR="$SCRIPT_PATH/images"
 
 files=('qemu_images-v2.tar'

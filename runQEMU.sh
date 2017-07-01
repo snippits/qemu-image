@@ -1,5 +1,5 @@
 #!/bin/bash
-SCRIPT_PATH=$(readlink -f $(dirname "${BASH_SOURCE[0]}"))
+SCRIPT_PATH="$(readlink -f "$(dirname "${BASH_SOURCE[0]}")")"
 IMAGE_DIR="$SCRIPT_PATH/images"
 #Use PATH to automatically solve the binary path problem.
 export PATH=$(pwd)/arm-softmmu/:$SCRIPT_PATH/../qemu_vpmu/build/arm-softmmu/:$PATH
@@ -53,7 +53,7 @@ function open_tap() {
 }
 
 function link_vmlinux() {
-    cd $IMAGE_DIR
+    cd "$IMAGE_DIR"
     ln -sf "$(pwd)/$1" "./vmlinux"
     cd -
 }
