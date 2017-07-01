@@ -14,7 +14,7 @@ function get_list() {
     echo "$l_list"
 }
 
-all_file_list=$(find "$IMAGE_DIR" -path ${SCRIPT_PATH}/rootfs -prune -o -exec file {} \;)
+all_file_list=$(find "$IMAGE_DIR" -path ${IMAGE_DIR}/rootfs -prune -o -exec file {} \;)
 cpio_list=$(get_list "ASCII cpio archive")
 e2fs_list=$(get_list "Linux .* ext.* filesystem data")
 mbr_list=$(get_list "MBR boot sector")
@@ -69,7 +69,7 @@ function image_list() {
 }
 
 function image_list_update() {
-    all_file_list=$(find "$IMAGE_DIR" -path ${SCRIPT_PATH}/rootfs -prune -o -exec file {} \;)
+    all_file_list=$(find "$IMAGE_DIR" -path ${IMAGE_DIR}/rootfs -prune -o -exec file {} \;)
     cpio_list=$(get_list "ASCII cpio archive")
     e2fs_list=$(get_list "Linux .* ext.* filesystem data")
     mbr_list=$(get_list "MBR boot sector")
