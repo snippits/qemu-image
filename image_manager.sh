@@ -208,7 +208,7 @@ function mount_image() {
         echo "Not implemented"
         return 4
         ;;
-    *) echo "${RED}[Fatal] unknown type of image${NC}" ;;
+    *) echo -e "${RED}[Fatal] unknown type of image${NC}" ;;
     esac
 }
 
@@ -226,7 +226,7 @@ function unmount_image() {
     "MBR")
         return 4
         ;;
-    *) echo "${RED}[Fatal] unknown type of image${NC}" ;;
+    *) echo -e "${RED}[Fatal] unknown type of image${NC}" ;;
     esac
 }
 
