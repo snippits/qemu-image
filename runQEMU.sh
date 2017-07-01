@@ -1,5 +1,6 @@
 #!/bin/bash
-SCRIPT_PATH=$(dirname "${BASH_SOURCE[0]}")
+SCRIPT_PATH=$(readlink -f $(dirname "${BASH_SOURCE[0]}"))
+IMAGE_DIR="$SCRIPT_PATH/images"
 #Use PATH to automatically solve the binary path problem.
 export PATH=$(pwd)/arm-softmmu/:$SCRIPT_PATH/../qemu_vpmu/build/arm-softmmu/:$PATH
 export PATH=$(pwd)/x86_64-softmmu/:$SCRIPT_PATH/../qemu_vpmu/build/x86_64-softmmu/:$PATH
@@ -11,8 +12,8 @@ QEMU_EXTRA_ARGS=()
 
 QEMU_ARGS+=(-m 1024)
 QEMU_ARGS+=(--nographic)
-# QEMU_ARGS+=(-vpmu-kernel-symbol $SCRIPT_PATH/vmlinux)
-# QEMU_ARGS+=(-drive if=sd,driver=raw,cache=writeback,file=$SCRIPT_PATH/data.ext3)
+# QEMU_ARGS+=(-vpmu-kernel-symbol $IMAGE_DIR/vmlinux)
+# QEMU_ARGS+=(-drive if=sd,driver=raw,cache=writeback,file=$IMAGE_DIR/data.ext3)
 
 function print_help() {
     echo "Usage:"
@@ -43,8 +44,8 @@ function print_help() {
 }
 
 function open_tap() {
-    if [ $(sudo -n ip 2>&1|grep "Usage"|wc -l) == 0 ] \
-        || [ $(sudo -n brctl 2>&1|grep "Usage"|wc -l) == 0 ]; then
+    if [[ $(sudo -n ip 2>&1|grep "Usage"|wc -l) == 0 ]] \
+        || [[ $(sudo -n brctl 2>&1|grep "Usage"|wc -l) == 0 ]]; then
         echo -e "\033[1;37m#You can add the following line into sudoer to save your time\033[0;00m"
         echo -e "\033[1;32m$(whoami) ALL=NOPASSWD: /usr/bin/ip, /usr/bin/brctl\033[0;00m"
     fi
@@ -52,10 +53,8 @@ function open_tap() {
 }
 
 function link_vmlinux() {
-    cd $SCRIPT_PATH
-    #Remove only when it's symbolic link to prevent problems
-    [ -f ./vmlinux ] && rm ./vmlinux
-    cp "$(pwd)/$1" "./vmlinux"
+    cd $IMAGE_DIR
+    ln -sf "$(pwd)/$1" "./vmlinux"
     cd -
 }
 
@@ -140,37 +139,37 @@ case "$dev" in
         QEMU=$QEMU_X86
         QEMU_ARGS+=(-M pc)
         QEMU_ARGS+=(-boot order=c)
-        QEMU_ARGS+=(-cdrom $SCRIPT_PATH/x86_64/archlinux.iso)
-        QEMU_ARGS+=(-drive file=$SCRIPT_PATH/x86_64/paslab.ext4,format=raw)
-        QEMU_ARGS+=(-vpmu-config $SCRIPT_PATH/default_x86.json)
+        QEMU_ARGS+=(-cdrom "$IMAGE_DIR/x86_64/archlinux.iso")
+        QEMU_ARGS+=(-drive file="$IMAGE_DIR/x86_64/paslab.ext4",format=raw)
+        QEMU_ARGS+=(-vpmu-config "$SCRIPT_PATH/default_x86.json")
         ;;
     "x86_busybox" )
         QEMU=$QEMU_X86
         QEMU_ARGS+=(-M pc)
-        QEMU_ARGS+=(-kernel $SCRIPT_PATH/x86_busybox/bzImage)
-        QEMU_ARGS+=(-drive file=$SCRIPT_PATH/x86_busybox/rootfs_x86.ext2,format=raw)
+        QEMU_ARGS+=(-kernel "$IMAGE_DIR/x86_busybox/bzImage")
+        QEMU_ARGS+=(-drive file="$IMAGE_DIR/x86_busybox/rootfs_x86.ext2",format=raw)
         QEMU_ARGS+=(-append "root=/dev/sda console=ttyS0")
-        QEMU_ARGS+=(-vpmu-config $SCRIPT_PATH/default_x86.json)
+        QEMU_ARGS+=(-vpmu-config "$SCRIPT_PATH/default_x86.json")
         ;;
     "arm_arch" )
         link_vmlinux "./arch_arm/vmlinux_arch"
         QEMU=$QEMU_ARM
         QEMU_ARGS+=(-M vexpress-a9)
-        QEMU_ARGS+=(-kernel $SCRIPT_PATH/arch_arm/zImage_arch)
-        QEMU_ARGS+=(-dtb $SCRIPT_PATH/arch_arm/vexpress-v2p-ca9.dtb)
-        QEMU_ARGS+=(-drive if=sd,driver=raw,cache=writeback,file=$SCRIPT_PATH/arch_arm/paslab.ext4)
+        QEMU_ARGS+=(-kernel "$IMAGE_DIR/arch_arm/zImage_arch")
+        QEMU_ARGS+=(-dtb "$IMAGE_DIR/arch_arm/vexpress-v2p-ca9.dtb")
+        QEMU_ARGS+=(-drive if=sd,driver=raw,cache=writeback,file="$IMAGE_DIR/arch_arm/paslab.ext4")
         QEMU_ARGS+=(-append "root=/dev/mmcblk0 rw roottype=ext4 console=ttyAMA0")
-        QEMU_ARGS+=(-vpmu-config $SCRIPT_PATH/default.json)
+        QEMU_ARGS+=(-vpmu-config "$SCRIPT_PATH/default.json")
         ;;
     "vexpress" )
         link_vmlinux "./kernels/vmlinux_vexpress"
         QEMU=$QEMU_ARM
         QEMU_ARGS+=(-M vexpress-a9)
-        QEMU_ARGS+=(-kernel $SCRIPT_PATH/kernels/zImage_vexpress)
-        QEMU_ARGS+=(-dtb $SCRIPT_PATH/vexpress-v2p-ca9.dtb)
-        QEMU_ARGS+=(-initrd $SCRIPT_PATH/rootfs.cpio)
+        QEMU_ARGS+=(-kernel "$IMAGE_DIR/kernels/zImage_vexpress")
+        QEMU_ARGS+=(-dtb "$IMAGE_DIR/vexpress-v2p-ca9.dtb")
+        QEMU_ARGS+=(-initrd "$IMAGE_DIR/rootfs.cpio")
         QEMU_ARGS+=(-append "console=ttyAMA0")
-        QEMU_ARGS+=(-vpmu-config $SCRIPT_PATH/default.json)
+        QEMU_ARGS+=(-vpmu-config "$SCRIPT_PATH/default.json")
         ;;
     * )
         echo "Device \"$dev\" is not in the list"

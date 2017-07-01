@@ -1,10 +1,12 @@
 #!/bin/bash
 SCRIPT_PATH=$(dirname "${BASH_SOURCE[0]}")
+IMAGE_DIR="$SCRIPT_PATH/images"
+# The name of ROOTFS_DIR must be rootfs for safety.
+ROOTFS_DIR="$(readlink -f "${IMAGE_DIR}/rootfs")"
+
 RED='\033[1;31m'
 YELLOW='\033[1;33m'
 NC='\033[0m'
-# The name of IMAGE_DIR must be rootfs for safety.
-IMAGE_DIR="$(readlink -f "/tmp/rootfs")"
 
 function get_list() {
     local l_list=$(echo "$all_file_list" | grep -e "$1")
@@ -12,7 +14,7 @@ function get_list() {
     echo "$l_list"
 }
 
-all_file_list=$(find ${SCRIPT_PATH} -path ${SCRIPT_PATH}/rootfs -prune -o -exec file {} \;)
+all_file_list=$(find "$IMAGE_DIR" -path ${SCRIPT_PATH}/rootfs -prune -o -exec file {} \;)
 cpio_list=$(get_list "ASCII cpio archive")
 e2fs_list=$(get_list "Linux .* ext.* filesystem data")
 mbr_list=$(get_list "MBR boot sector")
@@ -44,9 +46,14 @@ function pretty_print_list() {
 
     for f in ${list}; do
         last_folder_name="$(basename $(dirname $f))"
-        name="$(basename $f)"
+        # Print only file name if it is located in top level directory
+        if [[ "$last_folder_name" == "images" ]]; then
+            name="$(basename $f)"
+        else
+            name="${last_folder_name}/$(basename $f)"
+        fi
         printf "%-40s  %-20s  %-20s\n" \
-               "${last_folder_name}/${name}" \
+               "${name}" \
                $(get_image_type "${f}") \
                $(du -h "${f}" | cut -f1)
     done
@@ -62,7 +69,7 @@ function image_list() {
 }
 
 function image_list_update() {
-    all_file_list=$(find ${SCRIPT_PATH} -path ${SCRIPT_PATH}/rootfs -prune -o -exec file {} \;)
+    all_file_list=$(find "$IMAGE_DIR" -path ${SCRIPT_PATH}/rootfs -prune -o -exec file {} \;)
     cpio_list=$(get_list "ASCII cpio archive")
     e2fs_list=$(get_list "Linux .* ext.* filesystem data")
     mbr_list=$(get_list "MBR boot sector")
@@ -98,8 +105,8 @@ function get_ext_version() {
 function extract_cpio() {
     local file_path="$(readlink -f "$1")"
     [[ ! -r "$file_path" ]] && exit 4
-    mkdir -p "$IMAGE_DIR"
-    cd "$IMAGE_DIR"
+    mkdir -p "$ROOTFS_DIR"
+    cd "$ROOTFS_DIR"
     [[ "$?" != "0" ]] && exit 4
     echo "Extracting CPIO image..."
     sudo cpio -idu --quiet < "$file_path"
@@ -109,7 +116,7 @@ function extract_cpio() {
 function build_cpio() {
     local file_path="$(readlink -f "$1")"
     [[ ! -r "$file_path" ]] && exit 4
-    cd "$IMAGE_DIR"
+    cd "$ROOTFS_DIR"
     echo "Compressing CPIO image..."
     sudo find . | sudo cpio -H newc --quiet -o > "$file_path"
     cd - > /dev/null # Mute the folder change message
@@ -168,17 +175,17 @@ function check_all_paths() {
 }
 
 function clean_image_dir() {
-    if [[ "$(basename "$IMAGE_DIR")" != "rootfs" ]]; then
-        echo -e "${RED}Name of variable IMAGE_DIR must be 'rootfs' for safety${NC}"
-        echo -e "${YELLOW}Leave '$IMAGE_DIR' not removed...${NC}"
+    if [[ "$(basename "$ROOTFS_DIR")" != "rootfs" ]]; then
+        echo -e "${RED}Name of variable ROOTFS_DIR must be 'rootfs' for safety${NC}"
+        echo -e "${YELLOW}Leave '$ROOTFS_DIR' not removed...${NC}"
         return 4
     fi
     echo "Cleaning directory..."
-    sudo umount "$IMAGE_DIR" 2> /dev/null # Try un-mount first
+    sudo umount "$ROOTFS_DIR" 2> /dev/null # Try un-mount first
     # Remove the whole directory if it is a directory and contains at least one file
-    [[ -d "$IMAGE_DIR" ]] && [[ "$(ls "$IMAGE_DIR" | wc -l)" != "0" ]] &&
-        sudo rm -rf "$IMAGE_DIR"
-    mkdir -p "$IMAGE_DIR"
+    [[ -d "$ROOTFS_DIR" ]] && [[ "$(ls "$ROOTFS_DIR" | wc -l)" != "0" ]] &&
+        sudo rm -rf "$ROOTFS_DIR"
+    mkdir -p "$ROOTFS_DIR"
 }
 
 function mount_image() {
@@ -195,7 +202,7 @@ function mount_image() {
         extract_cpio "$image_path"
         ;;
     "EXT2" | "EXT3" | "EXT4")
-        sudo mount "$image_path" "$IMAGE_DIR"
+        sudo mount "$image_path" "$ROOTFS_DIR"
         ;;
     "MBR")
         echo "Not implemented"
@@ -214,7 +221,7 @@ function unmount_image() {
         build_cpio "$image_path"
         ;;
     "EXT2" | "EXT3" | "EXT4")
-        sudo umount "$IMAGE_DIR"
+        sudo umount "$ROOTFS_DIR"
         ;;
     "MBR")
         return 4
@@ -238,7 +245,7 @@ function push_file_to_image() {
     check_all_paths "$file_path" "$image_path" "$to_file_path"
 
     mount_image "$image_path"
-    copy_file "$file_path" "$(concatenate_path "$IMAGE_DIR" "$to_file_path")"
+    copy_file "$file_path" "$(concatenate_path "$ROOTFS_DIR" "$to_file_path")"
     unmount_image "$image_path"
 }
 
@@ -258,7 +265,7 @@ function pull_file_from_image() {
     check_all_paths "." "$image_path" "$to_file_path"
 
     mount_image "$image_path"
-    copy_file "$(concatenate_path "$IMAGE_DIR" "$to_file_path")" "$file_path"
+    copy_file "$(concatenate_path "$ROOTFS_DIR" "$to_file_path")" "$file_path"
     # Change owner and group of copied files
     sudo test -r "$file_path" && sudo chown -R $(whoami):$(whoami) "$file_path"
     unmount_image "$image_path"
@@ -269,7 +276,7 @@ function rm_file_from_image() {
     local tmp_img_name="${1%%@*}"
     local to_file_path="${1##*@}"
     local image_path="$(find_image_file_in_list "${tmp_img_name}")"
-    local full_target_path="$(concatenate_path "$IMAGE_DIR" "$to_file_path")"
+    local full_target_path="$(concatenate_path "$ROOTFS_DIR" "$to_file_path")"
 
     # Number of input arguments
     [[ ${#*} != 1 ]] && exit 4
@@ -291,7 +298,7 @@ function mkdir_to_image() {
     local tmp_img_name="${1%%@*}"
     local to_file_path="${1##*@}"
     local image_path="$(find_image_file_in_list "${tmp_img_name}")"
-    local full_target_path="$(concatenate_path "$IMAGE_DIR" "$to_file_path")"
+    local full_target_path="$(concatenate_path "$ROOTFS_DIR" "$to_file_path")"
 
     # Number of input arguments
     [[ ${#*} != 1 ]] && exit 4
@@ -315,7 +322,7 @@ function ls_in_image() {
     local tmp_img_name="${1%%@*}"
     local to_file_path="${1##*@}"
     local image_path="$(find_image_file_in_list "${tmp_img_name}")"
-    local full_target_path="$(concatenate_path "$IMAGE_DIR" "$to_file_path")"
+    local full_target_path="$(concatenate_path "$ROOTFS_DIR" "$to_file_path")"
 
     # Number of input arguments
     [[ ${#*} != 1 ]] && exit 4
