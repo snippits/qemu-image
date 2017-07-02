@@ -41,17 +41,10 @@ function find_image_file_in_list() {
 
 function pretty_print_list() {
     local list="${1}"
-    local last_folder_name=""
-    local name=""
 
     for f in ${list}; do
-        last_folder_name="$(basename $(dirname $f))"
-        # Print only file name if it is located in top level directory
-        if [[ "$last_folder_name" == "images" ]]; then
-            name="$(basename $f)"
-        else
-            name="${last_folder_name}/$(basename $f)"
-        fi
+        # Get relative path without heading slash
+        local name="${f##"${IMAGE_DIR}/"}"
         printf "%-40s  %-20s  %-20s\n" \
                "${name}" \
                $(get_image_type "${f}") \
