@@ -318,6 +318,7 @@ function mkdir_to_image() {
     unmount_image "$image_path"
 }
 
+# We require root privilege here because some files are visible to root only
 # Input 1: <image name>@<file path>
 function ls_in_image() {
     local tmp_img_name="${1%%@*}"
@@ -334,6 +335,7 @@ function ls_in_image() {
     check_all_paths "." "$image_path" "$to_file_path"
 
     mount_image "$image_path"
+    # We require root privilege here because some files are visible to root only
     sudo ls --color=auto -alh "$full_target_path"
     unmount_image "$image_path"
 }
