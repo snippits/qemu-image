@@ -384,6 +384,15 @@ case "$1" in
     [[ ${#*} != 2 ]] && echo "# of arguments is not 1" && exit 4
     ls_in_image "$2"
     ;;
+"query")
+    case "$2" in
+        "image_path_and_type")
+            [[ ${#*} != 3 ]] && exit 4
+            echo "$(find_image_file_in_list "$3")"
+            echo "$(get_image_type "$3")"
+            ;;
+    esac
+    ;;
 *)
     echo "Operation '$1' is not available"
     exit 4
