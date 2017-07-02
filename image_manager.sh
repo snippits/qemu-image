@@ -1,4 +1,6 @@
 #!/bin/bash
+# Copyright (c) 2017, Medicine Yeh
+
 SCRIPT_PATH=$(dirname "${BASH_SOURCE[0]}")
 IMAGE_DIR="$SCRIPT_PATH/images"
 # The name of ROOTFS_DIR must be rootfs for safety.

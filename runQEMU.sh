@@ -1,4 +1,6 @@
 #!/bin/bash
+# Copyright (c) 2017, Medicine Yeh
+
 SCRIPT_PATH="$(readlink -f "$(dirname "${BASH_SOURCE[0]}")")"
 IMAGE_DIR="$SCRIPT_PATH/images"
 #Use PATH to automatically solve the binary path problem.
