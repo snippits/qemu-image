@@ -219,6 +219,7 @@ function unmount_image() {
     case "$type" in
     "CPIO")
         build_cpio "$image_path"
+        clean_image_dir
         ;;
     "EXT2" | "EXT3" | "EXT4")
         sudo umount "$ROOTFS_DIR"
