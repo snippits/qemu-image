@@ -59,7 +59,7 @@ function main() {
         fi
         index+=1
     done
-    cd -
+    cd - > /dev/null # Mute the folder change message
 }
 
 main
