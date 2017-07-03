@@ -169,6 +169,15 @@ function check_all_paths() {
     fi
 }
 
+function check_mount_point_clean() {
+    sleep 0.1 # Wait for last unmount
+    if [[ "$(mount | grep "$ROOTFS_DIR")" != "" ]]; then
+        echo -e "${RED}Unexpected error: the last images is still mounted...${NC}"
+        echo -e "${RED}Abort${NC}"
+        exit 4
+    fi
+}
+
 function clean_image_dir() {
     if [[ "$(basename "$ROOTFS_DIR")" != "rootfs" ]]; then
         echo -e "${RED}Name of variable ROOTFS_DIR must be 'rootfs' for safety${NC}"
@@ -176,11 +185,40 @@ function clean_image_dir() {
         return 4
     fi
     echo "Cleaning directory..."
-    sudo umount "$ROOTFS_DIR" 2> /dev/null # Try un-mount first
+    # Try un-mount if it is a mount point
+    mountpoint -q "$ROOTFS_DIR" && sudo umount "$ROOTFS_DIR"
+    check_mount_point_clean
+
     # Remove the whole directory if it is a directory and contains at least one file
     [[ -d "$ROOTFS_DIR" ]] && [[ "$(ls "$ROOTFS_DIR" | wc -l)" != "0" ]] &&
         sudo rm -rf "$ROOTFS_DIR"
     mkdir -p "$ROOTFS_DIR"
+}
+
+function mount_mbr() {
+    local image_path="$1"
+    local sector_size=$(fdisk -l "$image_path" | grep "Sector size" | sed -e "s/.*://g" | sed -e "s/bytes.*//g")
+    local partitions=("$(fdisk -l "$image_path" | grep "Linux" | grep -v "swap")")
+    local p_start=()
+    local p_name=(p1 p2 p3 p4 p5 p6 p7 p8 p9 p10 p11 p12 p13 p14 p15 p16)
+    echo "Sector Size: $sector_size"
+    echo "Partitions: (Device  Boot  Start  End Sectors  Size  Id  Type)"
+    for p in "${partitions[@]}"; do
+        echo "$p"
+        # Use awk instead of cut to handle multiple spaces
+        local sector_start=$(echo "$p" | awk '{print $3}')
+        p_start+=("$sector_start")
+    done
+    echo ""
+
+    local index=0
+    for p in "${partitions[@]}"; do
+        echo "mount to ${p_name[$index]}"
+        local offset=$(( ${p_start[$index]} * $sector_size ))
+        mkdir -p "$ROOTFS_DIR/${p_name[$index]}"
+        sudo mount -o loop,offset="$offset" "$image_path" "$ROOTFS_DIR/${p_name[$index]}"
+        index=$(( $index + 1 ))
+    done
 }
 
 function mount_image() {
@@ -190,18 +228,17 @@ function mount_image() {
     echo "Extracting/Mounting $type image, it requires root privilege to create rootfs"
     sudo echo -e "${YELLOW}Running with root privilege now...${NC}"
     [[ $? != 0 ]] && echo -e "${RED}Abort${NC}" && exit 4
-    clean_image_dir
 
     case "$type" in
     "CPIO")
+        clean_image_dir
         extract_cpio "$image_path"
         ;;
     "EXT2" | "EXT3" | "EXT4")
         sudo mount "$image_path" "$ROOTFS_DIR"
         ;;
     "MBR")
-        echo "Not implemented"
-        return 4
+        mount_mbr "$image_path"
         ;;
     *) echo -e "${RED}[Fatal] unknown type of image${NC}" ;;
     esac
@@ -220,7 +257,10 @@ function unmount_image() {
         sudo umount "$ROOTFS_DIR"
         ;;
     "MBR")
-        return 4
+        local partition_folders=("$(ls "$ROOTFS_DIR")")
+        for p in "${partition_folders[@]}"; do
+            mountpoint -q "$ROOTFS_DIR/$p" && sudo umount "$ROOTFS_DIR/$p"
+        done
         ;;
     *) echo -e "${RED}[Fatal] unknown type of image${NC}" ;;
     esac
