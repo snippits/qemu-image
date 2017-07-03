@@ -199,7 +199,13 @@ function mount_mbr() {
     local image_path="$1"
     local readonly_flag="$2"
     local sector_size=$(fdisk -l "$image_path" | grep "Sector size" | sed -e "s/.*://g" | sed -e "s/bytes.*//g")
-    local partitions=("$(fdisk -l "$image_path" | grep "Linux" | grep -v "swap")")
+    # Save current IFS
+    SAVEIFS=$IFS
+    # Change IFS to new line.
+    IFS=$'\n'
+    local partitions=($(fdisk -l "$image_path" | grep "Linux" | grep -v "swap"))
+    # Restore IFS
+    IFS=$SAVEIFS
     local p_start=()
     local p_name=(p1 p2 p3 p4 p5 p6 p7 p8 p9 p10 p11 p12 p13 p14 p15 p16)
     echo "Sector Size: $sector_size"
@@ -263,7 +269,7 @@ function unmount_image() {
         sudo umount "$ROOTFS_DIR"
         ;;
     "MBR")
-        local partition_folders=("$(ls "$ROOTFS_DIR")")
+        local partition_folders=($(ls "$ROOTFS_DIR"))
         for p in "${partition_folders[@]}"; do
             mountpoint -q "$ROOTFS_DIR/$p" && sudo umount "$ROOTFS_DIR/$p"
         done
