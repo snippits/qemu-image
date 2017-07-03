@@ -197,6 +197,7 @@ function clean_image_dir() {
 
 function mount_mbr() {
     local image_path="$1"
+    local readonly_flag="$2"
     local sector_size=$(fdisk -l "$image_path" | grep "Sector size" | sed -e "s/.*://g" | sed -e "s/bytes.*//g")
     local partitions=("$(fdisk -l "$image_path" | grep "Linux" | grep -v "swap")")
     local p_start=()
@@ -216,13 +217,16 @@ function mount_mbr() {
         echo "mount to ${p_name[$index]}"
         local offset=$(( ${p_start[$index]} * $sector_size ))
         mkdir -p "$ROOTFS_DIR/${p_name[$index]}"
-        sudo mount -o loop,offset="$offset" "$image_path" "$ROOTFS_DIR/${p_name[$index]}"
+        local flags="loop,offset=$offset"
+        [[ "$readonly_flag" != "" ]] && flags="ro,$flags"
+        sudo mount -o "$flags" "$image_path" "$ROOTFS_DIR/${p_name[$index]}"
         index=$(( $index + 1 ))
     done
 }
 
 function mount_image() {
     local image_path="$1"
+    local readonly_flag="$2"
     local type=$(get_image_type "$image_path")
 
     echo "Extracting/Mounting $type image, it requires root privilege to create rootfs"
@@ -235,10 +239,12 @@ function mount_image() {
         extract_cpio "$image_path"
         ;;
     "EXT2" | "EXT3" | "EXT4")
-        sudo mount "$image_path" "$ROOTFS_DIR"
+        local extra_options=""
+        [[ "$readonly_flag" != "" ]] && extra_options="-o ro"
+        sudo mount $extra_options "$image_path" "$ROOTFS_DIR"
         ;;
     "MBR")
-        mount_mbr "$image_path"
+        mount_mbr "$image_path" "$readonly_flag"
         ;;
     *) echo -e "${RED}[Fatal] unknown type of image${NC}" ;;
     esac
@@ -300,7 +306,7 @@ function pull_file_from_image() {
     # Output "file_path" does not need to be check so we pass ".", which always exist
     check_all_paths "." "$image_path" "$to_file_path"
 
-    mount_image "$image_path"
+    mount_image "$image_path" "readonly"
     copy_file "$(concatenate_path "$ROOTFS_DIR" "$to_file_path")" "$file_path"
     # Change owner and group of copied files
     sudo test -r "$file_path" && sudo chown -R $(whoami):$(whoami) "$file_path"
@@ -369,7 +375,7 @@ function ls_in_image() {
     # Output "file_path" does not need to be check so we pass ".", which always exist
     check_all_paths "." "$image_path" "$to_file_path"
 
-    mount_image "$image_path"
+    mount_image "$image_path" "readonly"
     # We require root privilege here because some files are visible to root only
     sudo ls --color=auto -alh "$full_target_path"
     unmount_image "$image_path"
