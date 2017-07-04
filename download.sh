@@ -14,7 +14,7 @@ sha256sums=('baedfced2cd73de0270239e002df5d581a02ac32e6db836f88d3e32392b36ed5'
             '033a8ca7803513a47c22d05d0fae0006fd3641211a4ffc9a6c620734d94920ac')
 
 function check_sha256() {
-    local sum=$(sha256sum -b $1 | cut -d " " -f1)
+    local sum=$(sha256sum -b "$1" | cut -d " " -f1)
     [[ "$sum" == "$2" ]] && return 0 # true
     return 1 # false
 }
@@ -52,12 +52,12 @@ function main() {
     local index=0
 
     cd "$IMAGE_DIR"
-    for file_path in "${files[@]}"; do
-        [[ ! -f ${file_path} ]] && wget ${links[${index}]}
-        if $(check_sha256 $file_path ${sha256sums[${index}]}); then
-            unfold_file $file_path
+    for file_name in "${files[@]}"; do
+        [[ ! -f "${file_name}" ]] && wget "${links[${index}]}" -O "$file_name"
+        if $(check_sha256 $file_name ${sha256sums[${index}]}); then
+            unfold_file $file_name
         else
-            echo -e "${RED}Fatal: The file '$file_path' sha256sum does not match!!${NC}"
+            echo -e "${RED}Fatal: The file '$file_name' sha256sum does not match!!${NC}"
         fi
         index+=1
     done
