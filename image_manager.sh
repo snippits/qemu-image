@@ -8,6 +8,7 @@ ROOTFS_DIR="$(readlink -f "${IMAGE_DIR}/rootfs")"
 
 RED='\033[1;31m'
 YELLOW='\033[1;33m'
+GREEN='\033[1;32m'
 NC='\033[0m'
 
 function get_list() {
@@ -246,7 +247,7 @@ function mount_image() {
         ;;
     "EXT2" | "EXT3" | "EXT4")
         local extra_options=""
-        [[ "$readonly_flag" != "" ]] && extra_options="-o ro"
+        [[ "$readonly_flag" != "" ]] && extra_options="-o ro,norecovery"
         sudo mount $extra_options "$image_path" "$ROOTFS_DIR"
         ;;
     "MBR")
@@ -295,6 +296,7 @@ function push_file_to_image() {
     mount_image "$image_path"
     copy_file "$file_path" "$(concatenate_path "$ROOTFS_DIR" "$to_file_path")"
     unmount_image "$image_path"
+    echo -e "${GREEN}Succeed${NC}"
 }
 
 # Input 1: <image name>@<file path> 2: <file>
@@ -317,6 +319,7 @@ function pull_file_from_image() {
     # Change owner and group of copied files
     sudo test -r "$file_path" && sudo chown -R $(whoami):$(whoami) "$file_path"
     unmount_image "$image_path"
+    echo -e "${GREEN}Succeed${NC}"
 }
 
 # Input 1: <image name>@<file path>
@@ -339,6 +342,7 @@ function rm_file_from_image() {
         sudo rm -rf "$full_target_path"
     fi
     unmount_image "$image_path"
+    echo -e "${GREEN}Succeed${NC}"
 }
 
 # Input 1: <image name>@<file path>
@@ -363,6 +367,7 @@ function mkdir_to_image() {
         sudo mkdir -p "$full_target_path"
     fi
     unmount_image "$image_path"
+    echo -e "${GREEN}Succeed${NC}"
 }
 
 # We require root privilege here because some files are visible to root only
