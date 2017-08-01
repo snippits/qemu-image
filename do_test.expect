@@ -15,6 +15,8 @@ set COMMAND "$COMMAND \n";
 
 set COMMAND_STR "root.*\>";
 
+# Disable user key stroke
+stty -echo
 # spawn make execute
 if {$argc == 3} {
     set out_path [lindex $argv 2]
@@ -47,6 +49,11 @@ while {$count >= 0 } {
 # Send ctrl+a, then x
 send "\x01";
 send "x";
+
+# Enable user key stroke
+stty echo
+# Take over all key stroke from user. This solve the bug of remaining characters of resize in guest.
+interact
 
 sleep 0.5;
 exit
