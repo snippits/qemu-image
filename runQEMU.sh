@@ -7,15 +7,18 @@ IMAGE_DIR="$SCRIPT_PATH/images"
 export PATH=$(pwd)/arm-softmmu/:$SCRIPT_PATH/../qemu_vpmu/build/arm-softmmu/:$PATH
 export PATH=$(pwd)/x86_64-softmmu/:$SCRIPT_PATH/../qemu_vpmu/build/x86_64-softmmu/:$PATH
 export PATH=$(pwd)/i386-softmmu/:$SCRIPT_PATH/../qemu_vpmu/build/i386-softmmu/:$PATH
-QEMU_ARM=qemu-system-arm
-QEMU_X86=qemu-system-x86_64
+export QEMU_ARM=qemu-system-arm
+export QEMU_X86=qemu-system-x86_64
 QEMU_ARGS=()
-QEMU_EXTRA_ARGS=()
 
 QEMU_ARGS+=(-m 1024)
 QEMU_ARGS+=(--nographic)
 # QEMU_ARGS+=(-vpmu-kernel-symbol $IMAGE_DIR/vmlinux)
 # QEMU_ARGS+=(-drive if=sd,driver=raw,cache=writeback,file=$IMAGE_DIR/data.ext3)
+
+# Debug traces
+#QEMU_ARGS+=(-trace enable=true,events=/tmp/events-vfio)
+#QEMU_ARGS+=(-mem-path /dev/hugepages)
 
 function print_help() {
     echo "Usage:"
@@ -38,11 +41,8 @@ function print_help() {
     echo "       -enable-kvm         : Enable KVM"
     echo "       -drive <PATH>       : Hook another disk image to guest"
     echo ""
-    echo "Device Name List:"
-    echo "       x86_busybox"
-    echo "       x86_arch"
-    echo "       arm_arch"
-    echo "       vexpress"
+    echo "Device/Image List:"
+    tree -d ${IMAGE_DIR}
 }
 
 function open_tap() {
@@ -52,12 +52,6 @@ function open_tap() {
         echo -e "\033[1;32m$(whoami) ALL=NOPASSWD: /usr/bin/ip, /usr/bin/brctl\033[0;00m"
     fi
     sudo ip tuntap add tap0 mode tap user $(whoami)
-}
-
-function link_vmlinux() {
-    cd "$IMAGE_DIR"
-    ln -sf "$(pwd)/$1" "./vmlinux"
-    cd -
 }
 
 function generate_random_mac_addr() {
@@ -76,7 +70,9 @@ while [[ "$1" != "" ]]; do
         "-net" )
             generate_random_mac_addr
             open_tap
-            QEMU_ARGS+=(-net nic,model=virtio,macaddr=$MAC_ADDR -net tap,vlan=0,ifname=tap0)
+            #QEMU_ARGS+=(-net nic,model=virtio,macaddr=$MAC_ADDR -net tap,vlan=0,ifname=tap0)
+            QEMU_ARGS+=(-netdev type=tap,id=net0,ifname=tap0,vhost=on)
+            QEMU_ARGS+=(-device virtio-net-pci,netdev=net0,mac=$MAC_ADDR)
             shift 1
             ;;
         "-g" )
@@ -92,7 +88,7 @@ while [[ "$1" != "" ]]; do
             shift 1
             ;;
         "-o" )
-            QEMU_EXTRA_ARGS+=(-vpmu-output "$(readlink -f "$2")")
+            QEMU_ARGS+=(-vpmu-output "$(readlink -f "$2")")
             shift 2
             ;;
         "-smp" )
@@ -124,64 +120,41 @@ while [[ "$1" != "" ]]; do
             exit 0
             ;;
         * )
-            dev="$1"
+            image_path="$1"
             shift 1
             ;;
     esac
 done
 
-if [ -z "$dev" ]; then
+if [ -z "$image_path" ]; then
     # No device name after options
     print_help
     exit 1
 fi
 
-case "$dev" in
-    "x86_arch" )
-        QEMU=$QEMU_X86
-        QEMU_ARGS+=(-M pc)
-        QEMU_ARGS+=(-boot order=c)
-        QEMU_ARGS+=(-cdrom "$IMAGE_DIR/x86_64/archlinux.iso")
-        QEMU_ARGS+=(-drive file="$IMAGE_DIR/x86_64/paslab.ext4",format=raw)
-        QEMU_ARGS+=(-vpmu-config "$SCRIPT_PATH/default_x86.json")
-        ;;
-    "x86_busybox" )
-        QEMU=$QEMU_X86
-        QEMU_ARGS+=(-M pc)
-        QEMU_ARGS+=(-kernel "$IMAGE_DIR/x86_busybox/bzImage")
-        QEMU_ARGS+=(-drive file="$IMAGE_DIR/x86_busybox/rootfs_x86.ext2",format=raw)
-        QEMU_ARGS+=(-append "root=/dev/sda console=ttyS0")
-        QEMU_ARGS+=(-vpmu-config "$SCRIPT_PATH/default_x86.json")
-        ;;
-    "arm_arch" )
-        link_vmlinux "./arch_arm/vmlinux_arch"
-        QEMU=$QEMU_ARM
-        QEMU_ARGS+=(-M vexpress-a9)
-        QEMU_ARGS+=(-kernel "$IMAGE_DIR/arch_arm/zImage_arch")
-        QEMU_ARGS+=(-dtb "$IMAGE_DIR/arch_arm/vexpress-v2p-ca9.dtb")
-        QEMU_ARGS+=(-drive if=sd,driver=raw,cache=writeback,file="$IMAGE_DIR/arch_arm/paslab.ext4")
-        QEMU_ARGS+=(-append "root=/dev/mmcblk0 rw roottype=ext4 console=ttyAMA0")
-        QEMU_ARGS+=(-vpmu-config "$SCRIPT_PATH/default.json")
-        ;;
-    "vexpress" )
-        link_vmlinux "./kernels/vmlinux_vexpress"
-        QEMU=$QEMU_ARM
-        QEMU_ARGS+=(-M vexpress-a9)
-        QEMU_ARGS+=(-kernel "$IMAGE_DIR/kernels/zImage_vexpress")
-        QEMU_ARGS+=(-dtb "$IMAGE_DIR/vexpress-v2p-ca9.dtb")
-        QEMU_ARGS+=(-initrd "$IMAGE_DIR/rootfs.cpio")
-        QEMU_ARGS+=(-append "console=ttyAMA0")
-        QEMU_ARGS+=(-vpmu-config "$SCRIPT_PATH/default.json")
-        ;;
-    * )
-        echo "Device \"$dev\" is not in the list"
-        exit 1
-        ;;
-esac
+# Target is a file, capture its directory instead.
+image_path_d="$(dirname "$image_path")"
 
-# echo "Running command: ${QEMU} ${QEMU_ARGS[*]} ${QEMU_EXTRA_ARGS[*]}"
+# Try relative path first
+ROUTES=()
+if [[ -r "$image_path" ]]; then
+    ROUTES+=("$image_path/runQEMU.sh")
+    ROUTES+=("$image_path_d/runQEMU.sh")
+fi
+# Try absolute path
+ROUTES+=("$IMAGE_DIR/$image_path/runQEMU.sh")
+ROUTES+=("$IMAGE_DIR/$image_path_d/runQEMU.sh")
+for path in "${ROUTES[@]}"; do
+    [[ -r "$path" ]] && QEMU="$path" && break;
+done
+
+if [[ ! -r "$QEMU" ]]; then
+    echo "Cannot find script runQEMU.sh in \"$image_path\"."
+    exit 1
+fi
+
 # Execute QEMU
-$QEMU "${QEMU_ARGS[@]}" "${QEMU_EXTRA_ARGS[@]}"
+$QEMU "${QEMU_ARGS[@]}"
 
 #Leave some time to clean up the forked processes
 sleep 0.2

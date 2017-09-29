@@ -4,13 +4,13 @@
 SCRIPT_PATH="$(dirname "${BASH_SOURCE[0]}")"
 IMAGE_DIR="$SCRIPT_PATH/images"
 
-files=('qemu_images-v3.tar'
+files=('qemu_images-v4.tar.gz'
        'arch_arm.tar')
 
-links=('http://pas.csie.ntu.edu.tw/shared/qemu_images-v3.tar'
+links=('http://pas.csie.ntu.edu.tw/shared/qemu_images-v4.tar.gz'
        'http://pas.csie.ntu.edu.tw/shared/arch_arm.tar')
 
-sha256sums=('daec144b9c7f9de71967a0b44fe64840a9c0966443b04f8d5bd3b67fb2fc9140'
+sha256sums=('f26bf904d17e37f00fc962006250c08eea937b1681bf5ecafcba4493ceaf4262'
             '033a8ca7803513a47c22d05d0fae0006fd3641211a4ffc9a6c620734d94920ac')
 
 function check_sha256() {
