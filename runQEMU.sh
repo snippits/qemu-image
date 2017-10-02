@@ -22,7 +22,7 @@ QEMU_ARGS+=(--nographic)
 
 function print_help() {
     echo "Usage:"
-    echo "       $0 [OPTION]... <DEVICE NAME>"
+    echo "       $0 <IMAGE NAME> [OPTIONS]..."
     echo "  Execute QEMU with preset arguments for execution."
     echo ""
     echo "Options:"
@@ -41,8 +41,11 @@ function print_help() {
     echo "       -enable-kvm         : Enable KVM"
     echo "       -drive <PATH>       : Hook another disk image to guest"
     echo ""
-    echo "Device/Image List:"
-    tree -d ${IMAGE_DIR}
+    echo "Image List:"
+    local image_list=( $(cd "${IMAGE_DIR}" && find -type f -name "runQEMU.sh" | xargs dirname) )
+    for img in "${image_list[@]}"; do
+        echo "${img##*./}"
+    done
 }
 
 function open_tap() {
