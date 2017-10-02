@@ -20,9 +20,9 @@ stty -echo
 # spawn make execute
 if {$argc == 3} {
     set out_path [lindex $argv 2]
-    spawn ./runQEMU.sh -o $out_path vexpress
+    spawn ./runQEMU.sh -o $out_path arm/busybox
 } else {
-    spawn ./runQEMU.sh vexpress
+    spawn ./runQEMU.sh arm/busybox
 }
 
 expect -re ".* login:";
