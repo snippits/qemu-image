@@ -30,9 +30,10 @@ function print_help() {
     echo "       -g                  : Use gdb to run QEMU"
     echo "       -gg                 : Run QEMU with remote gdb mode to debug guest program"
     echo "                             Default port: 1234"
-    echo "       -o <OUTPUT PATH>    : Specify the output directory for emulation"
+    echo "       -o <OUTPUT PATH>    : Specify the output 'directory' for emulation"
     echo "                             OUTPUT PATH is the path to a directory for logs and files."
     echo "                             default: /tmp/snippit"
+    echo "       -vpmu-log <PATH>    : Specify the output file for VPMU console output (default stderr)"
     echo ""
     echo "Options to QEMU:"
     echo "       -smp <N>            : Number of cores (default: 1)"
@@ -40,6 +41,10 @@ function print_help() {
     echo "       -snapshot           : Read only guest image"
     echo "       -enable-kvm         : Enable KVM"
     echo "       -drive <PATH>       : Hook another disk image to guest"
+    echo "       -mem-path <PATH>    : Use file to allocate guest memory"
+    echo "                             ex: -mem-path /dev/hugepages"
+    echo "       -trace <....>       : Use QEMU trace API with specified events"
+    echo "                             ex: -trace enable=true,events=/tmp/events-vfio"
     echo ""
     echo "Image List:"
     local image_list=( $(cd "${IMAGE_DIR}" && find -type f -name "runQEMU.sh" | xargs dirname) )
@@ -112,6 +117,18 @@ while [[ "$1" != "" ]]; do
             ;;
         "-drive" )
             QEMU_ARGS+=(-drive if=sd,driver=raw,cache=writeback,file=$2)
+            shift 2
+            ;;
+        "-vpmu-log" )
+            QEMU_ARGS+=(-vpmu-log "$2")
+            shift 2
+            ;;
+        "-mem-path" )
+            QEMU_ARGS+=(-mem-path "$2")
+            shift 2
+            ;;
+        "-trace" )
+            QEMU_ARGS+=(-trace "$2")
             shift 2
             ;;
         "-h" )
