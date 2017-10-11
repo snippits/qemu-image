@@ -20,7 +20,7 @@ stty -echo
 # spawn make execute
 if {$argc == 3} {
     set out_path [lindex $argv 2]
-    spawn ./runQEMU.sh -o $out_path arm/busybox
+    spawn ./runQEMU.sh arm/busybox -o $out_path
 } else {
     spawn ./runQEMU.sh arm/busybox
 }
