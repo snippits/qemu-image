@@ -33,7 +33,7 @@ function print_help() {
     echo "       -o <OUTPUT PATH>    : Specify the output 'directory' for emulation"
     echo "                             OUTPUT PATH is the path to a directory for logs and files."
     echo "                             default: /tmp/snippit"
-    echo "       -vpmu-log <PATH>    : Specify the output file for VPMU console output (default stderr)"
+    echo "       -vpmu-console <PATH>: Specify the output file for VPMU console output (default stderr)"
     echo ""
     echo "Options to QEMU:"
     echo "       -smp <N>            : Number of cores (default: 1)"
@@ -87,8 +87,7 @@ while [[ "$1" != "" ]]; do
             # Disable file buffering to get the latest results from output
             # One could also use command 'call fflush({file descriptor})' in gdb
             export LD_PRELOAD=${SCRIPT_PATH}/nobuffering.so
-            QEMU_ARM="gdb --args $QEMU_ARM"
-            QEMU_X86="gdb --args $QEMU_X86"
+            export SNIPPITS_GDB="gdb --args "
             shift 1
             ;;
         "-gg" )
@@ -119,8 +118,8 @@ while [[ "$1" != "" ]]; do
             QEMU_ARGS+=(-drive if=sd,driver=raw,cache=writeback,file=$2)
             shift 2
             ;;
-        "-vpmu-log" )
-            QEMU_ARGS+=(-vpmu-log "$2")
+        "-vpmu-console" )
+            QEMU_ARGS+=(-vpmu-console "$2")
             shift 2
             ;;
         "-mem-path" )
