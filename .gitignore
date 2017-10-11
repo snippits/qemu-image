@@ -10,8 +10,8 @@ vmlinux
 matrix
 
 # Compressed image files
-arch_arm*.tar
-qemu_images*.tar
+arch_arm*.tar*
+qemu_images*.tar*
 
 # Image folders
 arch_arm/
