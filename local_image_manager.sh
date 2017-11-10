@@ -148,6 +148,11 @@ function concatenate_path() {
     echo "${out_path}"
 }
 
+function get_user_group_id() {
+    sudo test -r "$1" && sudo stat -c "%u:%g" "$1"
+    return $?
+}
+
 function copy_file() {
     # Remove the tailing slash
     local from_file="${1%%/}"
@@ -159,13 +164,11 @@ function copy_file() {
     sudo test ! -d "$to_file" && sudo test ! -d "$to_dir" &&
         echo "To File path '$to_dir' does not exist" && return 4
 
-    if [[ -r "$from_file" ]] && [[ -w "$to_file" ]]; then
-        # Permission is granted to the current user
-        cp -r "$from_file" "$to_file"
-    else
-        # Use privilege permission
-        sudo cp -r "$from_file" "$to_file"
-    fi
+    local to_dir_owner=$(get_user_group_id "$to_file")
+    [[ "$to_dir_owner" == "" ]] && to_dir_owner=$(get_user_group_id "$to_dir")
+    [[ "$to_dir_owner" == "" ]] && echo "Cannot stat the ownership of '$to_file'" && return 4
+
+    sudo rsync -a -o -g --chown=$to_dir_owner "$from_file" "$to_file"
 }
 
 function check_all_paths() {
@@ -227,27 +230,36 @@ function mount_mbr() {
     SAVEIFS=$IFS
     # Change IFS to new line.
     IFS=$'\n'
-    local partitions=($(fdisk -l "$image_path" | grep "Linux" | grep -v "swap"))
+    local partitions=($(fdisk -l "$image_path" | grep "Linux\|FAT" | grep -v "swap"))
     # Restore IFS
     IFS=$SAVEIFS
     local p_start=()
+    local p_end=()
     local p_name=(p1 p2 p3 p4 p5 p6 p7 p8 p9 p10 p11 p12 p13 p14 p15 p16)
     echo "Sector Size: $sector_size"
     echo "Partitions: (Device  Boot  Start  End Sectors  Size  Id  Type)"
     for p in "${partitions[@]}"; do
         echo "$p"
-        # Use awk instead of cut to handle multiple spaces
-        local sector_start=$(echo "$p" | awk '{print $3}')
-        p_start+=("$sector_start")
+        if [[ "$(echo "$p" | grep "*")" == "" ]]; then
+            local sector_start=$(echo "$p" | awk '{print $2}')
+            p_start+=("$sector_start")
+            p_end+=($(echo "$p" | awk '{print $3}'))
+        else
+            local sector_start=$(echo "$p" | awk '{print $3}')
+            p_start+=("$sector_start")
+            p_end+=($(echo "$p" | awk '{print $4}'))
+        fi
     done
     echo ""
 
     local index=0
+    local size_limit=0
     for p in "${partitions[@]}"; do
         echo "mount to ${p_name[$index]}"
         local offset=$(( ${p_start[$index]} * $sector_size ))
         mkdir -p "$ROOTFS_DIR/${p_name[$index]}"
-        local flags="loop,offset=$offset"
+        size_limit=$[ size_limit + ${p_end[$index]} - ${p_start[$index]} ]
+        local flags="loop,offset=$offset,sizelimit=$[ $size_limit * 512 ]"
         [[ "$readonly_flag" != "" ]] && flags="ro,$flags"
         sudo mount -o "$flags" "$image_path" "$ROOTFS_DIR/${p_name[$index]}"
         index=$(( $index + 1 ))
@@ -339,8 +351,6 @@ function pull_file_from_image() {
 
     mount_image "$image_path" "readonly"
     copy_file "$(concatenate_path "$ROOTFS_DIR" "$to_file_path")" "$file_path"
-    # Change owner and group of copied files
-    sudo test -r "$file_path" && sudo chown -R $(whoami):$(whoami) "$file_path"
     unmount_image "$image_path"
     echo -e "${GREEN}Succeed${NC}"
 }
