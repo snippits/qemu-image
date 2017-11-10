@@ -2,7 +2,7 @@
 # Copyright (c) 2017, Medicine Yeh
 
 SCRIPT_PATH="$(dirname "${BASH_SOURCE[0]}")"
-IMAGE_DIR="$SCRIPT_PATH/images"
+IMAGE_DIR="$SCRIPT_PATH/guest-images"
 
 # Format: [OUTPUT PATH]/<RENAMED COMPRESSED FILE NAME>
 # Where the OUTPUT PATH is optional since the compressed file might already contain

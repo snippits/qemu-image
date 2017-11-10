@@ -2,7 +2,7 @@
 # Copyright (c) 2017, Medicine Yeh
 
 SCRIPT_PATH="$(readlink -f "$(dirname "${BASH_SOURCE[0]}")")"
-IMAGE_DIR="$SCRIPT_PATH/images"
+IMAGE_DIR="$SCRIPT_PATH/guest-images"
 #Use PATH to automatically solve the binary path problem.
 export PATH=$(pwd)/arm-softmmu/:$SCRIPT_PATH/../qemu_vpmu/build/arm-softmmu/:$PATH
 export PATH=$(pwd)/x86_64-softmmu/:$SCRIPT_PATH/../qemu_vpmu/build/x86_64-softmmu/:$PATH

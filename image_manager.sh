@@ -2,7 +2,7 @@
 # Copyright (c) 2017, Medicine Yeh
 
 SCRIPT_PATH=$(dirname "${BASH_SOURCE[0]}")
-IMAGE_DIR="$SCRIPT_PATH/images"
+IMAGE_DIR="$SCRIPT_PATH/guest-images"
 # The name of ROOTFS_DIR must be rootfs for safety.
 ROOTFS_DIR="$(readlink -f "${IMAGE_DIR}/rootfs")"
 
