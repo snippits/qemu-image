@@ -81,7 +81,7 @@ function pretty_print_list() {
         printf "%-40s  %-20s  %-20s\n" \
                "${name}" \
                $(get_image_type "${f}") \
-               $(du -h "${f}" | cut -f1)
+               $(du -L -h "${f}" | cut -f1)
     done
 }
 
