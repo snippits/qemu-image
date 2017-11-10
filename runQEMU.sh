@@ -20,6 +20,25 @@ QEMU_ARGS+=(--nographic)
 #QEMU_ARGS+=(-trace enable=true,events=/tmp/events-vfio)
 #QEMU_ARGS+=(-mem-path /dev/hugepages)
 
+
+function get_run_script() {
+    local image_path="$1"
+    # No path specified
+    [[ -z "$image_path" ]] && return 1
+    # If target is a file and also an executable, use it!!!!
+    [[ -f "$image_path" ]] && [[ -x "$image_path" ]] && echo "$image_path" && return 0
+    # If target is an file, set var to its directory instead
+    [[ -f "$image_path" ]] && image_path="$(dirname "$image_path")"
+    # If target is not a directory, return with fail
+    [[ ! -d "$image_path" ]] && return 1
+    # Everything has been checked to get to this step
+    # $image_path is now set to an existing path of where image/runscript resides
+    local run_script="${image_path}/runQEMU.sh"
+    [[ -r "$run_script" ]] && echo "$run_script" && return 0
+    # return 1 when the $run_script is not readable/existing
+    return 1
+}
+
 function print_help() {
     echo "Usage:"
     echo "       $0 <IMAGE NAME> [OPTIONS]..."
@@ -145,34 +164,18 @@ while [[ "$1" != "" ]]; do
     esac
 done
 
-if [ -z "$image_path" ]; then
-    # No device name after options
-    print_help
-    exit 1
-fi
-
-# Target is a file, capture its directory instead.
-image_path_d="$(dirname "$image_path")"
-
+# No device/image name in options
+[[ -z "$image_path" ]] && print_help && exit 1
 # Try relative path first
-ROUTES=()
-if [[ -r "$image_path" ]]; then
-    ROUTES+=("$image_path/runQEMU.sh")
-    ROUTES+=("$image_path_d/runQEMU.sh")
-fi
+QEMU=$(get_run_script "$image_path")
 # Try absolute path
-ROUTES+=("$IMAGE_DIR/$image_path/runQEMU.sh")
-ROUTES+=("$IMAGE_DIR/$image_path_d/runQEMU.sh")
-for path in "${ROUTES[@]}"; do
-    [[ -r "$path" ]] && QEMU="$path" && break;
-done
-
-if [[ ! -r "$QEMU" ]]; then
-    echo "Cannot find script runQEMU.sh in \"$image_path\"."
-    exit 1
-fi
+[[ -z "$QEMU" ]] && QEMU=$(get_run_script "${IMAGE_DIR}/${image_path}")
+[[ -z "$QEMU" ]] && echo "Cannot find script runQEMU.sh in '$image_path'" && exit 1
 
 # Execute QEMU
+COLOR_GREEN='\033[1;32m'
+NC='\033[0;00m'
+echo -e "Running '${COLOR_GREEN}${QEMU} ${QEMU_ARGS[@]}${NC}'"
 $QEMU "${QEMU_ARGS[@]}"
 
 #Leave some time to clean up the forked processes
@@ -187,3 +190,4 @@ if [ "$remaining_sims" != 0 ]; then
     echo "Terminal Rest"
 fi
 
+exit 0
