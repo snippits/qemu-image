@@ -2,8 +2,9 @@
 
 import os
 import sys
-import sh
+import subprocess
 
+import sh
 import logzero
 from logzero import logger
 
@@ -13,9 +14,13 @@ ROOTFS_DIR = os.path.join(IMAGE_DIR, '.rootfs')
 LOOP_DIR = os.path.join(IMAGE_DIR, '.loops')
 
 
-def automount(image, mount_point, user=False):
+def automount(image, mount_point, user=False, withFork=False):
     path_exist_or_exit(mount_point)
     try_unmount(mount_point, user)
+    if withFork:
+        pid = os.fork()
+        # parent process, return and keep running
+        if pid > 0: return
     if image['type'] == 'MBR':
         sh.mkdir('-p', LOOP_DIR)
         if user:
@@ -24,14 +29,16 @@ def automount(image, mount_point, user=False):
         for idx, part in enumerate(image['partitionTable']):
             source_file = os.path.join(LOOP_DIR, str(idx + 1))
             target_folder = os.path.join(mount_point, 'p' + str(idx + 1))
+            try_unmount(target_folder, user)
             if user:
                 sh.mkdir('-p', target_folder)
-                # TODO mount FAT with fuse
+                # TODO mount FAT/BTRFS/etc. with fuse
                 sh.ext4fuse(source_file, target_folder, _ok_code=range(255))
             else:
-                options = get_mount_options(image, idx + 1)
                 sh.sudo.mkdir('-p', target_folder, _fg=True)
-                sh.sudo.mount(image['path'], target_folder, options=options, _fg=True)
+                options = get_mount_options(image, idx + 1, noerror=True)
+                if options:
+                    sh.sudo.mount(image['path'], target_folder, options=options, _fg=True)
     elif image['type'] == 'CPIO':
         safely_clean_dir(mount_point, user)
         if user:
@@ -109,13 +116,15 @@ def safely_clean_dir(mount_point, user=False):
     return 0
 
 
-def get_mount_options(image, partition=1):
+def get_mount_options(image, partition=1, noerror=False):
     img = image.get('partitionTable')
     if img is None: return None
     logger.debug(img)
 
     part = img['partitions'][partition - 1]
     if part['mountable'] == False:
+        if noerror:
+            return None
         logger.error('Target partition is not mountable')
         print(part)
         exit(1)
@@ -195,10 +204,10 @@ class AutoMount():
         elif self.image_type == 'MBR':
             # Try to get options, return None if it does not require any options
             options = get_mount_options(self.image, self.image.get('targetPartition'))
-            sh.sudo.mount(
-                source=self.image_file, target=self.mount_point, options=options, _fg=True)
+            # Try to umount and ignore any errors
+            sh.sudo.mount(self.image_file, self.mount_point, options=options, _fg=True)
         else:
-            sh.sudo.mount(source=self.image_file, target=self.mount_point, _fg=True)
+            sh.sudo.mount(self.image_file, self.mount_point, _fg=True)
 
     def __enter__(self):
         return self
@@ -211,5 +220,5 @@ class AutoMount():
             safely_clean_dir(self.mount_point)
         else:
             # Try to umount and ignore any errors
-            sh.sudo.umount(self.mount_point, '-R', '-l', _ok_code=range(255), _fg=True)
+            subprocess.Popen('sudo umount -R -l {}'.format(self.mount_point).split())
         logger.debug('Clean/Unmount {}'.format(self.mount_point))

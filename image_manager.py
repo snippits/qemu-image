@@ -234,7 +234,10 @@ def do_mount(argv, user=False):
     if not user:
         inform_user_sudo('Need sudo to unfold/mount')
     image = parse_image(argv[0])
-    mount.automount(image, argv[1], user)
+    withFork = False
+    if len(argv) > 2 and argv[2] == '-F':
+        withFork = True
+    mount.automount(image, argv[1], user, withFork)
 
 
 def do_umount(argv, user=False):
@@ -257,14 +260,27 @@ TYPE - 1: Do <OP> in image
        <OP>  <IMAGE>@/[PART]/<PATH> [OPTIONS...]
 
        where <OP> can be one of the followings:
-       ls, rm, mkdir, file, etc.
+       ls, rm, mkdir, file, vim, nano, cat, etc.
        [OPTIONS...] can be empty or options to <OP>
 
        Example: list all the files in partition 2 with -alh
        {} ls test/image.img@/p2/ -alh
+
 TYPE - 2:
        push  <PATH> <IMAGE>@/<PATH>  : Push a file/folder into image
        pull  <IMAGE>@/<PATH> <PATH>  : Pull a file/folder from image
+
+TYPE - 3:
+       query <TYPE> <IMAGE>
+
+       where <TYPE> can be:
+           list, typeof, sizeof, pathof, partitionTableof
+
+TYPE - 4:
+       mount <IMAGE> <MOUNT POINT ROOT> [-F]
+       umount <IMAGE> <MOUNT POINT ROOT>
+
+       Option "-F" means fork. Execute commands in a non-blocking fashion.
 
 '''.format(sys.argv[0], sys.argv[0]))
 
@@ -280,7 +296,7 @@ def main(argv):
     if len(argv) == 0 or argv[0] == '-h' or argv[0] == '--help':
         print_help()
         exit(0)
-    single_arg_cmds = ['ls', 'rm', 'mkdir', 'file']
+    single_arg_cmds = ['ls', 'rm', 'mkdir', 'file', 'vim', 'nano', 'cat']
     auto_color_cmds = ['ls']
 
     # Remove one element from argument list
