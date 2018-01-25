@@ -4,6 +4,11 @@ This is an image file repository for testing QEMU.
 The default root file system is built with [linaro gcc 4.9](https://releases.linaro.org/components/toolchain/binaries/4.9-2017.01/arm-linux-gnueabi/gcc-linaro-4.9.4-2017.01-x86_64_arm-linux-gnueabi.tar.xz).
 Please download this compiler and add to PATH if you want to compile your own binary.
 
+# Requirements
+```
+pip3 install sh
+```
+
 # 3 Steps to Use
 1. Make sure the __snippits/qemu_vpmu__ is built.
 2. Run `./download.sh` to download pre-built images.
