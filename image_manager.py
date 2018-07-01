@@ -10,6 +10,7 @@ import subprocess
 import re
 import logging
 from itertools import chain
+from functools import partial
 
 import sh
 import logzero
@@ -143,6 +144,15 @@ def do_single_arg_cmd(argv, command, extra_argv=[]):
             exit(1)
 
 
+def do_list(argv, extra_argv=[]):
+    image_list = find_image_list()
+    print('{:<40}{:<20}{:<20}'.format('IMAGE NAME', 'TYPE', 'SIZE'))
+    for image in image_list:
+        image_size_text = sh.du('-L', '-h', image['name'], _ok_code=range(255))
+        image['sizeB'] = image_size_text.split()[0]
+        print('{:<40}{:<20}{:<20}'.format(image['name'], image['type'], image['sizeB']))
+
+
 def do_push(argv, extra_argv=[]):
     command_argv, extended_argv = cut_argv(argv, 2)
     if len(command_argv) != 2:
@@ -193,7 +203,8 @@ def do_pull(argv, extra_argv=[]):
             exit(1)
 
 
-def do_query(argv, subcommand):
+def do_query(argv, extra_argv=[]):
+    subcommand = argv.pop(0)
     # Match any of command, i.e. *of, e.g. typeof.
     if re.match(r'^\w+of$', subcommand):
         if os.path.isfile(argv[0]):
@@ -298,38 +309,28 @@ def main(argv):
     if len(argv) == 0 or argv[0] == '-h' or argv[0] == '--help':
         print_help()
         exit(0)
-    single_arg_cmds = ['ls', 'rm', 'mkdir', 'file', 'vim', 'nano', 'cat']
-    auto_color_cmds = ['ls']
+    allowed_cmds = ['ls', 'rm', 'mkdir', 'file', 'vim', 'nano', 'cat']
+
+    actions = {
+        'list': do_list,
+        'push': do_push,
+        'pull': do_pull,
+        'query': do_query,
+        'mount': do_mount,
+        'umount': do_umount,
+        'userMount': partial(do_mount, user=True),
+        'userUmount': partial(do_umount, user=True),
+    }
 
     # Remove one element from argument list
     command = argv.pop(0)
-    if command == 'list':
-        image_list = find_image_list()
-        print('{:<40}{:<20}{:<20}'.format('IMAGE NAME', 'TYPE', 'SIZE'))
-        for image in image_list:
-            image_size_text = sh.du('-L', '-h', image['name'], _ok_code=range(255))
-            image['sizeB'] = image_size_text.split()[0]
-            print('{:<40}{:<20}{:<20}'.format(image['name'], image['type'], image['sizeB']))
-    elif command == 'push':
-        do_push(argv)
-    elif command == 'pull':
-        do_pull(argv)
-    elif command in single_arg_cmds:
+    if command in actions.keys():
+        actions[command](argv)
+    elif command in allowed_cmds:
         extra_argv = []
-        if command in auto_color_cmds:
+        if command in ['ls']:    # Add auto color to these commands
             extra_argv += ['--color=auto']
         do_single_arg_cmd(argv, command, extra_argv)
-    elif command == 'query':
-        subcommand = argv.pop(0)
-        do_query(argv, subcommand)
-    elif command == 'mount':
-        do_mount(argv)
-    elif command == 'umount':
-        do_umount(argv)
-    elif command == 'userMount':
-        do_mount(argv, user=True)
-    elif command == 'userUmount':
-        do_umount(argv, user=True)
     else:
         logger.error('Command not supported: ' + str(command))
         exit(1)
