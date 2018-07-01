@@ -32,3 +32,9 @@ __pycache__
 
 # Mac OS folder
 .DS_Store
+
+# Others
+*.trace
+*.btrace
+*.out
+*.log
